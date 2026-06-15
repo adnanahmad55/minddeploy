@@ -39,7 +39,7 @@ const Debate = () => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
-  const [timeLeft, setTimeLeft] = useState(900);
+  const [timeLeft, setTimeLeft] = useState<number>(location.state?.timeLimit || 900);
   const [isDebateActive, setIsDebateActive] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,6 +51,8 @@ const Debate = () => {
     is_ai: true
   };
   const topic: string = location.state?.topic || 'The role of AI in society';
+  const personality: string = location.state?.personality || 'Neutral';
+  const timeLimitMs: number = location.state?.timeLimit || 900;
   const debateId = typeof location.state?.debateId === 'number'
     ? location.state.debateId
     : parseInt(String(location.state?.debateId), 10);
@@ -101,8 +103,18 @@ const Debate = () => {
 
       // --- REMOVED THE navigation from here, it's now in the endDebate function ---
       socketRef.current.on('debate_ended', (data) => {
-        console.log('Debate ended event received, but navigation is handled by the button click.');
-        // If you need to do anything here (e.g., show a toast), you can add it back.
+        console.log('Debate ended event received. Navigating to Result.', data);
+        navigate('/Result', {
+          state: {
+            opponent,
+            topic,
+            messages: messagesRef.current,
+            duration: timeLimitMs - timeLeftRef.current,
+            winner: data.winner,
+            debateId: debateId,
+            realResult: data // Pass the entire real result from backend
+          }
+        });
       });
       // --- END REMOVED ---
     }
@@ -128,27 +140,52 @@ const Debate = () => {
   useEffect(() => {
     if (isNaN(debateId) || !debateId) return;
 
-    const fetchInitialMessages = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/debate/${debateId}/messages`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, },
-        });
-        if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
-        const data = await response.json();
-        setMessages(data.map((m: any) => ({
-            ...m,
-            id: String(m.id),
-            sender_id: m.sender_id !== null ? Number(m.sender_id) : null,
-            timestamp: new Date(m.timestamp)
-        })));
-        console.log("Initial messages fetched:", data);
+        const [msgResponse, debateResponse] = await Promise.all([
+          fetch(`http://127.0.0.1:8000/debate/${debateId}/messages`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, },
+          }),
+          fetch(`http://127.0.0.1:8000/debate/${debateId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, },
+          })
+        ]);
+
+        if (debateResponse.ok) {
+          const debateData = await debateResponse.json();
+          if (debateData.winner !== null) {
+             toast({ title: "Debate Already Finished", description: "This debate has already concluded." });
+             navigate('/Result', {
+               state: {
+                 opponent,
+                 topic,
+                 messages: messagesRef.current,
+                 duration: timeLimitMs,
+                 winner: debateData.winner,
+                 debateId: debateId
+               }
+             });
+             return;
+          }
+        }
+
+        if (msgResponse.ok) {
+          const data = await msgResponse.json();
+          setMessages(data.map((m: any) => ({
+              ...m,
+              id: String(m.id),
+              sender_id: m.sender_id !== null ? Number(m.sender_id) : null,
+              timestamp: new Date(m.timestamp)
+          })));
+          console.log("Initial messages fetched:", data);
+        }
       } catch (error) {
-        console.error("Error fetching initial messages:", error);
-        toast({ title: "Error loading debate history", description: "Could not fetch previous messages for this debate.", variant: "destructive", });
+        console.error("Error fetching initial debate data:", error);
+        toast({ title: "Error loading debate", description: "Could not fetch debate data.", variant: "destructive", });
       }
     };
-    fetchInitialMessages();
-  }, [debateId]);
+    fetchInitialData();
+  }, [debateId, navigate, opponent, topic, timeLimitMs]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -197,7 +234,10 @@ const Debate = () => {
     if (opponent.is_ai) {
       console.log("Sending message to AI debate endpoint...");
       try {
-        const response = await fetch(`http://127.0.0.1:8000/ai-debate/${debateId}/${encodeURIComponent(topic)}`, {
+        const url = new URL(`http://127.0.0.1:8000/ai-debate/${debateId}/${encodeURIComponent(topic)}`);
+        url.searchParams.append('personality', personality);
+        
+        const response = await fetch(url.toString(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -254,22 +294,9 @@ const Debate = () => {
 
   const endDebate = () => {
     setIsDebateActive(false);
-    toast({ title: "Debate ended by user", description: "The debate has concluded.", });
+    toast({ title: "Debate ended by user", description: "Evaluating debate... Please wait.", });
     // Emit end_debate event to backend, using messagesRef.current for the latest messages state
     socketRef.current?.emit('end_debate', { debate_id: debateId, current_messages: messagesRef.current });
-    
-    // --- CONCRETE FIX: Immediate navigation to results page ---
-    navigate('/Result', {
-      state: {
-        opponent,
-        topic,
-        messages: messagesRef.current, // Pass the latest messages
-        duration: 900 - timeLeftRef.current, // Pass the latest duration
-        winner: null, // Winner is NOT yet available from the backend
-        debateId: debateId
-      }
-    });
-    // --- END CONCRETE FIX ---
   };
 
   const forfeit = () => {

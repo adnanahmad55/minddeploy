@@ -66,6 +66,18 @@ async def decline_challenge(sid, data):
         print(f"Challenge declined by {sid} to {online_users[challenger_id]['username']}")
 
 @sio.event
+async def join_debate_room(sid, data):
+    debate_id = str(data.get('debateId'))
+    await sio.enter_room(sid, debate_id)
+    print(f"User with sid {sid} joined debate room {debate_id}")
+
+@sio.event
+async def leave_debate_room(sid, data):
+    debate_id = str(data.get('debateId'))
+    await sio.leave_room(sid, debate_id)
+    print(f"User with sid {sid} left debate room {debate_id}")
+
+@sio.event
 async def send_message_to_human(sid, data):
     debate_id = data.get('debateId')
     sender_id = data.get('senderId')
@@ -170,3 +182,82 @@ async def end_debate(sid, data):
     except Exception as e:
         print(f"CRITICAL ERROR in end_debate handler for debate {debate_id}: {e}")
         await sio.emit('error', {'detail': 'Server error during debate evaluation.'}, room=sid)
+
+# --- GROUP CHAT AND DM SOCKET EVENTS ---
+
+@sio.event
+async def join_group_room(sid, data):
+    group_id = str(data.get('groupId'))
+    await sio.enter_room(sid, f"group_{group_id}")
+    print(f"User {sid} joined group room group_{group_id}")
+
+@sio.event
+async def leave_group_room(sid, data):
+    group_id = str(data.get('groupId'))
+    await sio.leave_room(sid, f"group_{group_id}")
+    print(f"User {sid} left group room group_{group_id}")
+
+@sio.event
+async def send_group_message(sid, data):
+    group_id = data.get('groupId')
+    sender_id = data.get('senderId')
+    content = data.get('content')
+
+    try:
+        with database.SessionLocal() as db:
+            is_member = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == sender_id).first()
+            if not is_member:
+                await sio.emit('error', {'detail': 'Not authorized.'}, room=sid)
+                return
+
+            new_msg = models.GroupMessage(group_id=group_id, sender_id=sender_id, content=content)
+            db.add(new_msg)
+            db.commit()
+            db.refresh(new_msg)
+
+            user = db.query(models.User).filter(models.User.id == sender_id).first()
+            msg_dict = {
+                "id": new_msg.id,
+                "group_id": new_msg.group_id,
+                "sender_id": new_msg.sender_id,
+                "content": new_msg.content,
+                "timestamp": new_msg.timestamp.isoformat(),
+                "sender": {"id": user.id, "username": user.username, "elo": user.elo, "email": user.email, "mind_tokens": user.mind_tokens}
+            }
+
+            await sio.emit('new_group_message', msg_dict, room=f"group_{group_id}")
+    except Exception as e:
+        print(f"Error in send_group_message: {e}")
+
+@sio.event
+async def join_dm_room(sid, data):
+    user_id = data.get('userId')
+    await sio.enter_room(sid, f"user_{user_id}")
+    print(f"User {sid} joined personal dm room user_{user_id}")
+
+@sio.event
+async def send_direct_message(sid, data):
+    sender_id = data.get('senderId')
+    receiver_id = data.get('receiverId')
+    content = data.get('content')
+
+    try:
+        with database.SessionLocal() as db:
+            new_msg = models.DirectMessage(sender_id=sender_id, receiver_id=receiver_id, content=content)
+            db.add(new_msg)
+            db.commit()
+            db.refresh(new_msg)
+
+            msg_dict = {
+                "id": new_msg.id,
+                "sender_id": new_msg.sender_id,
+                "receiver_id": new_msg.receiver_id,
+                "content": new_msg.content,
+                "timestamp": new_msg.timestamp.isoformat()
+            }
+
+            # Emit to both sender and receiver rooms
+            await sio.emit('new_direct_message', msg_dict, room=f"user_{sender_id}")
+            await sio.emit('new_direct_message', msg_dict, room=f"user_{receiver_id}")
+    except Exception as e:
+        print(f"Error in send_direct_message: {e}")

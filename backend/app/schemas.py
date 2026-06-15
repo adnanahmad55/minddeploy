@@ -161,3 +161,58 @@ class LeaderboardEntry(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ----------------- PHASE 2: GROUPS & DMS SCHEMAS -----------------
+
+class ChatGroupCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class ChatGroupOut(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    owner_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class GroupMemberOut(BaseModel):
+    id: int
+    group_id: int
+    user_id: int
+    joined_at: datetime
+    user: UserOut
+
+    class Config:
+        from_attributes = True
+
+class GroupMessageCreate(BaseModel):
+    content: str
+    group_id: int
+
+class GroupMessageOut(BaseModel):
+    id: int
+    group_id: int
+    sender_id: int
+    content: str
+    timestamp: datetime
+    sender: UserOut
+
+    class Config:
+        from_attributes = True
+
+class DirectMessageCreate(BaseModel):
+    receiver_id: int
+    content: str
+
+class DirectMessageOut(BaseModel):
+    id: int
+    sender_id: int
+    receiver_id: int
+    content: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True

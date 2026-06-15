@@ -132,8 +132,14 @@ const Dashboard = () => {
             <Link to="/leaderboard">
               <Button variant="ghost">Leaderboard</Button>
             </Link>
+            <Link to="/store">
+              <Button variant="ghost">Store</Button>
+            </Link>
             <Link to="/forums">
               <Button variant="ghost">Forums</Button>
+            </Link>
+            <Link to="/messages">
+              <Button variant="ghost">Messages</Button>
             </Link>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Welcome back,</p>

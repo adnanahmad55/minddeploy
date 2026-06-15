@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Crown, Trophy } from 'lucide-react';
+import { Crown, Trophy, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 interface LeaderboardUser {
   id: string;
@@ -20,11 +22,18 @@ const Leaderboard = () => {
   return (
     <div className="min-h-screen bg-gradient-bg text-foreground p-8">
       <Card className="max-w-2xl mx-auto bg-card/50 border-border/30">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center">
-            <Trophy className="mr-2" />
-            Leaderboard
-          </CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" asChild>
+              <Link to="/dashboard">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Link>
+            </Button>
+            <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center">
+              <Trophy className="mr-2" />
+              Leaderboard
+            </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

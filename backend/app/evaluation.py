@@ -66,22 +66,37 @@ async def evaluate_debate(messages: List[models.Message]) -> Dict[str, Any]:
     try:
         analysis_content = await get_ai_response(prompt)
         
-        parsed_analysis = json.loads(analysis_content)
+        # Clean potential markdown JSON wrapping
+        cleaned_content = analysis_content.strip()
+        if cleaned_content.startswith("```json"):
+            cleaned_content = cleaned_content[7:]
+        elif cleaned_content.startswith("```"):
+            cleaned_content = cleaned_content[3:]
+        if cleaned_content.endswith("```"):
+            cleaned_content = cleaned_content[:-3]
+        cleaned_content = cleaned_content.strip()
+        
+        parsed_analysis = json.loads(cleaned_content)
         
         winner_id = None
-        if parsed_analysis.get('winner') == 'User' and messages:
+        raw_winner = parsed_analysis.get('winner')
+        
+        if raw_winner == 'User' and messages:
             first_user_message = next((m for m in messages if m.sender_type == 'user'), None)
             if first_user_message:
                 winner_id = first_user_message.sender_id
-        elif parsed_analysis.get('winner') == 'AI':
+        elif raw_winner == 'AI':
             winner_id = 0
+            
+        # Ensure result is always a valid string for the frontend
+        final_result = raw_winner if raw_winner in ['User', 'AI', 'Draw'] else 'Draw'
             
         return {
             'winner_id': winner_id,
-            'result': parsed_analysis.get('winner'),
-            'elo_change': parsed_analysis.get('elo_change'),
-            'score': parsed_analysis.get('score'),
-            'feedback': parsed_analysis.get('feedback'),
+            'result': final_result,
+            'elo_change': parsed_analysis.get('elo_change', 0),
+            'score': parsed_analysis.get('score', 50),
+            'feedback': parsed_analysis.get('feedback', {}),
         }
 
     except json.JSONDecodeError as e:

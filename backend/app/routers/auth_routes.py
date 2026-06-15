@@ -17,7 +17,8 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     new_user = models.User(
         username=user.username,
         email=user.email,
-        hashed_password=hashed
+        hashed_password=hashed,
+        mind_tokens=10000
     )
     
     db.add(new_user)
@@ -40,6 +41,13 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(dat
 @router.get("/users/me", response_model=schemas.UserOut)
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
+
+from typing import List
+
+@router.get("/users/all", response_model=List[schemas.UserOut])
+def get_all_users(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    # Return all users except the current one
+    return db.query(models.User).filter(models.User.id != current_user.id).all()
 
 @router.post("/test-user")
 def create_test_user(db: Session = Depends(database.get_db)):

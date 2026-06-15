@@ -28,7 +28,7 @@ class Debate(Base):
     id = Column(Integer, primary_key=True, index=True)
     # Replaced user_id with player1_id and player2_id
     player1_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    player2_id = Column(Integer, ForeignKey("users.id"), nullable=False) # Can be AI's "user" ID if you model AI as a user
+    player2_id = Column(Integer, ForeignKey("users.id"), nullable=True) # Can be AI's "user" ID if you model AI as a user
     topic = Column(String, nullable=False)
     winner = Column(String, nullable=True) # Consider making this a ForeignKey to User.id or separate result field
     timestamp = Column(DateTime, default=datetime.utcnow)
@@ -95,3 +95,56 @@ class Post(Base):
     content = Column(Text, nullable=False)
     thread_id = Column(Integer, ForeignKey("threads.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+# --- Phase 2: Groups and DMs ---
+
+class ChatGroup(Base):
+    __tablename__ = "chat_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True, nullable=False)
+    description = Column(String, nullable=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User", foreign_keys=[owner_id])
+    members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
+    messages = relationship("GroupMessage", back_populates="group", cascade="all, delete-orphan")
+
+
+class GroupMember(Base):
+    __tablename__ = "group_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("chat_groups.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+    group = relationship("ChatGroup", back_populates="members")
+    user = relationship("User")
+
+
+class GroupMessage(Base):
+    __tablename__ = "group_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("chat_groups.id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    group = relationship("ChatGroup", back_populates="messages")
+    sender = relationship("User")
+
+
+class DirectMessage(Base):
+    __tablename__ = "direct_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    sender = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])

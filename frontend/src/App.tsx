@@ -13,9 +13,11 @@ import Result from "./pages/Result";
 import NotFound from "./pages/NotFound";
 import Leaderboard from "./pages/Leaderboard";
 import Redeem from "./pages/Redeem";
+import Store from "./pages/Store";
 import Forums from "./pages/Forums";
 import Threads from "./pages/Threads";
 import Posts from "./pages/Posts";
+import Messages from "./pages/Messages";
 import Analysis from "./pages/Analysis";
 import ChatRoom from "./pages/ChatRoom"; // <--- IMPORT ChatRoom
 
@@ -66,6 +68,8 @@ const App = () => (
             <Route path="/result" element={<ProtectedRoute><Result /></ProtectedRoute>} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/redeem" element={<ProtectedRoute><Redeem /></ProtectedRoute>} />
+            <Route path="/store" element={<ProtectedRoute><Store /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/forums" element={<ProtectedRoute><Forums /></ProtectedRoute>} />
             <Route path="/forums/:forumId/threads" element={<ProtectedRoute><Threads /></ProtectedRoute>} />
             <Route path="/threads/:threadId/posts" element={<ProtectedRoute><Posts /></ProtectedRoute>} />

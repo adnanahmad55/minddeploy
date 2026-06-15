@@ -23,6 +23,7 @@ async def create_ai_message_route(
     debate_id: int,
     topic: str,
     message: schemas.MessageCreate,
+    personality: str = "Neutral",
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -54,7 +55,7 @@ async def create_ai_message_route(
         logger.debug("DEBUG: [4] User message emitted via Socket.IO after manual datetime conversion.")
 
         # ... (AI response generation) ...
-        ai_prompt = f"The debate topic is '{topic}'. User '{current_user.username}' just said: '{message.content}'. Respond to this argument from the perspective of the AI opponent. Keep your response concise (max 2 sentences)."
+        ai_prompt = f"You are participating in a debate with the personality of a {personality} debater. The debate topic is '{topic}'. User '{current_user.username}' just said: '{message.content}'. Respond to this argument from the perspective of the AI opponent. Keep your response concise (max 2 sentences)."
         logger.debug(f"DEBUG: [5] Calling get_ai_response. Prompt starts: '{ai_prompt[:70]}...'")
         ai_content = await get_ai_response(ai_prompt)
         logger.debug(f"DEBUG: [6] AI response received. Content starts: '{ai_content[:70]}...'")

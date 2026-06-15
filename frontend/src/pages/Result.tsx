@@ -109,9 +109,33 @@ const Result = () => {
       };
     };
 
-    const initialSimulatedResult = calculateSimulatedResults(winnerName);
-    setResult(initialSimulatedResult);
-    setIsLoading(false);
+    const realResult = location.state?.realResult;
+    
+    if (realResult) {
+      let resultStr: 'win' | 'loss' | 'draw' | null = null;
+      if (realResult.winner === user?.username) resultStr = 'win';
+      else if (realResult.winner === 'Draw') resultStr = 'draw';
+      else if (realResult.winner !== 'Undetermined') resultStr = 'loss';
+      
+      setResult({
+        score: realResult.score || 50,
+        result: resultStr,
+        eloChange: realResult.elo_change || 0,
+        tokensEarned: resultStr === 'win' ? 50 : (resultStr === 'loss' ? 10 : 25),
+        feedback: {
+          logic: realResult.feedback?.logic || 50,
+          persuasion: realResult.feedback?.persuasion || 50,
+          evidence: realResult.feedback?.evidence || 50,
+          style: realResult.feedback?.style || 50,
+        },
+        overallAnalysisText: '',
+      });
+      setIsLoading(false);
+    } else {
+      const initialSimulatedResult = calculateSimulatedResults(winnerName);
+      setResult(initialSimulatedResult);
+      setIsLoading(false);
+    }
 
     const fetchAnalysis = async () => {
       setIsAnalysisLoading(true);
