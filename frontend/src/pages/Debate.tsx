@@ -73,7 +73,7 @@ const Debate = () => {
 
     if (!socketRef.current) {
       console.log("Initializing new socket instance for Debate ID:", debateId, "User ID:", user.id);
-      socketRef.current = io('http://127.0.0.1:8000', {
+      socketRef.current = io((import.meta.env.VITE_API_URL || 'http://localhost:8000'), {
         query: {
           debateId: debateId,
           userId: parseInt(user.id, 10)
@@ -143,10 +143,10 @@ const Debate = () => {
     const fetchInitialData = async () => {
       try {
         const [msgResponse, debateResponse] = await Promise.all([
-          fetch(`http://127.0.0.1:8000/debate/${debateId}/messages`, {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/debate/${debateId}/messages`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, },
           }),
-          fetch(`http://127.0.0.1:8000/debate/${debateId}`, {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/debate/${debateId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, },
           })
         ]);
@@ -234,7 +234,7 @@ const Debate = () => {
     if (opponent.is_ai) {
       console.log("Sending message to AI debate endpoint...");
       try {
-        const url = new URL(`http://127.0.0.1:8000/ai-debate/${debateId}/${encodeURIComponent(topic)}`);
+        const url = new URL(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/ai-debate/${debateId}/${encodeURIComponent(topic)}`);
         url.searchParams.append('personality', personality);
         
         const response = await fetch(url.toString(), {

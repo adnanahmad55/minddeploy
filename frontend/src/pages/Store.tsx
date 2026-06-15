@@ -71,7 +71,7 @@ const Store = () => {
 
     setPurchasingId(item.id);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/store/purchase/${item.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/store/purchase/${item.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

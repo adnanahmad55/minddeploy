@@ -81,7 +81,7 @@ const ChatRoom = () => {
     const opponentUserId = parseInt(opponent.id, 10);
 
     try {
-      const debateRes = await fetch(`http://127.0.0.1:8000/debate/${debateId}`);
+      const debateRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/debate/${debateId}`);
       if (!debateRes.ok) {
         throw new Error(`Failed to fetch debate details: ${debateRes.status}`);
       }
@@ -99,7 +99,7 @@ const ChatRoom = () => {
           ? userRef.current
           : await (
               await fetch(
-                `http://127.0.0.1:8000/users/${debateData.player1_id}`
+                `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/users/${debateData.player1_id}`
               )
             ).json();
       const player2Data =
@@ -107,7 +107,7 @@ const ChatRoom = () => {
           ? userRef.current
           : await (
               await fetch(
-                `http://127.0.0.1:8000/users/${debateData.player2_id}`
+                `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/users/${debateData.player2_id}`
               )
             ).json();
 
@@ -127,7 +127,7 @@ const ChatRoom = () => {
 
       if (!socketRef.current) {
         console.log("Initializing new socket instance for ChatRoom.");
-        socketRef.current = io("http://127.0.0.1:8000", {
+        socketRef.current = io((import.meta.env.VITE_API_URL || 'http://localhost:8000'), {
           query: { debateId: debateId, userId: userId },
         });
         console.log("DEBUG: Socket initialized:", socketRef.current);
@@ -207,7 +207,7 @@ const ChatRoom = () => {
       }
 
       const initialMessagesRes = await fetch(
-        `http://127.0.0.1:8000/debate/${debateId}/messages`
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/debate/${debateId}/messages`
       );
       if (!initialMessagesRes.ok)
         throw new Error("Failed to fetch initial messages.");

@@ -15,7 +15,7 @@ interface OnlineUser {
   is_ai?: boolean;
 }
 
-const socket = io('http://127.0.0.1:8000');
+const socket = io((import.meta.env.VITE_API_URL || 'http://localhost:8000'));
 
 const Matchmaking = () => {
   const { user } = useAuth();
@@ -93,7 +93,7 @@ const Matchmaking = () => {
     toast({ title: `Starting debate with AI Bot`, description: 'Generating initial arguments...', });
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/debate/', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/debate/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ const Matchmaking = () => {
     try {
         const player1Id = parseInt(challenger.id, 10);
         const player2Id = parseInt(user.id, 10);
-        const response = await fetch('http://127.0.0.1:8000/debate/', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/debate/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`, },
             body: JSON.stringify({ player1_id: player1Id, player2_id: player2Id, topic: topic, }),

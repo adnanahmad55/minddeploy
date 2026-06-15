@@ -57,15 +57,15 @@ const Dashboard = () => {
       try {
         // --- FIXED: Standardized URLs to 127.0.0.1 ---
         const [statsRes, historyRes, leaderboardRes, badgesRes, streaksRes] = await Promise.all([
-          fetch('http://127.0.0.1:8000/dashboard/stats', {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/dashboard/stats`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
           }),
-          fetch('http://127.0.0.1:8000/dashboard/history', {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/dashboard/history`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
           }),
-          fetch('http://127.0.0.1:8000/leaderboard/'),
-          fetch('http://127.0.0.1:8000/gamification/badges'),
-          fetch('http://127.0.0.1:8000/gamification/streaks', {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/leaderboard/`),
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/gamification/badges`),
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/gamification/streaks`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           }),
         ]);

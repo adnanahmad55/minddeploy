@@ -25,7 +25,7 @@ const Analysis = () => {
     }
 
     setIsLoading(true);
-    fetch(`http://127.0.0.1:8000/analysis/${debateId}`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/analysis/${debateId}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
       },
