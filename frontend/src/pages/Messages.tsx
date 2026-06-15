@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Users, Hash, Send, ArrowLeft, UserPlus, Paperclip, Loader2, Mic, Square, Smile, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { MessageSquare, Users, Hash, Send, ArrowLeft, UserPlus, Paperclip, Loader2, Mic, Square, Smile, SmilePlus, MoreVertical, Edit2, Trash2, Sticker } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { io, Socket } from 'socket.io-client';
@@ -56,6 +57,9 @@ const Messages = () => {
   const [gifSearch, setGifSearch] = useState('');
   const [gifs, setGifs] = useState<string[]>([]);
   const [isGifPopoverOpen, setIsGifPopoverOpen] = useState(false);
+  
+  // Emoji
+  const [isEmojiPopoverOpen, setIsEmojiPopoverOpen] = useState(false);
 
   // Edit Message
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
@@ -87,15 +91,14 @@ const Messages = () => {
   }, [token]);
 
   useEffect(() => {
-    if (!gifSearch.trim()) {
-      setGifs([]);
-      return;
-    }
     const fetchGifs = async () => {
       try {
-        // Use provided API key or a fallback trending endpoint / demo key
-        const apiKey = import.meta.env.VITE_GIPHY_API_KEY || 'lR7L81vCg2tK1G1J3yv05K57T2L2bB1O'; // Public beta key
-        const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(gifSearch)}&limit=12`);
+        const apiKey = import.meta.env.VITE_GIPHY_API_KEY || 'lR7L81vCg2tK1G1J3yv05K57T2L2bB1O';
+        let endpoint = `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=12`;
+        if (gifSearch.trim()) {
+          endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(gifSearch)}&limit=12`;
+        }
+        const res = await fetch(endpoint);
         if (res.ok) {
           const data = await res.json();
           setGifs(data.data.map((g: any) => g.images.fixed_height.url));
@@ -104,9 +107,11 @@ const Messages = () => {
         console.error("Giphy error", err);
       }
     };
-    const timer = setTimeout(fetchGifs, 500);
-    return () => clearTimeout(timer);
-  }, [gifSearch]);
+    if (isGifPopoverOpen) {
+      const timer = setTimeout(fetchGifs, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [gifSearch, isGifPopoverOpen]);
 
   useEffect(() => {
     // Setup Socket.IO
@@ -624,7 +629,7 @@ const Messages = () => {
                 <Popover open={isGifPopoverOpen} onOpenChange={setIsGifPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="ghost" size="icon" disabled={isUploading || isRecording} title="GIFs">
-                      <Smile className="w-4 h-4" />
+                      <Sticker className="w-4 h-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent side="top" align="start" className="w-72 p-2">
@@ -644,9 +649,24 @@ const Messages = () => {
                           onClick={() => handleSendMessage(undefined, url)}
                         />
                       ))}
-                      {gifSearch && gifs.length === 0 && <p className="text-xs text-muted-foreground col-span-3 text-center py-4">No GIFs found</p>}
-                      {!gifSearch && <p className="text-xs text-muted-foreground col-span-3 text-center py-4">Type to search GIPHY</p>}
+                      {gifs.length === 0 && <p className="text-xs text-muted-foreground col-span-3 text-center py-4">No GIFs found</p>}
                     </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Popover open={isEmojiPopoverOpen} onOpenChange={setIsEmojiPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" disabled={isUploading || isRecording} title="Emojis">
+                      <Smile className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-auto p-0 border-none shadow-none bg-transparent">
+                    <EmojiPicker 
+                      onEmojiClick={(emojiData) => {
+                        setNewMessage(prev => prev + emojiData.emoji);
+                        setIsEmojiPopoverOpen(false);
+                      }} 
+                    />
                   </PopoverContent>
                 </Popover>
 
