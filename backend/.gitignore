@@ -32,7 +32,6 @@ logs/
 *.sqlite3
 *.db
 alembic/versions/*.pyc
-alembic.ini
 
 # OS
 .DS_Store
