@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Users, Hash, Send, ArrowLeft, UserPlus, Paperclip, Loader2 } from 'lucide-react';
+import { MessageSquare, Users, Hash, Send, ArrowLeft, UserPlus, Paperclip, Loader2, Mic, Square, Smile, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { io, Socket } from 'socket.io-client';
 import { useToast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Group {
   id: number;
@@ -24,6 +27,7 @@ interface Message {
   sender_id: number;
   content?: string;
   media_url?: string;
+  is_edited?: boolean;
   timestamp: string;
   sender?: User; // For group messages
 }
@@ -42,6 +46,20 @@ const Messages = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [unreadDms, setUnreadDms] = useState<Record<number, number>>({});
   const [unreadGroups, setUnreadGroups] = useState<Record<number, number>>({});
+  
+  // Voice Recording
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
+
+  // Giphy
+  const [gifSearch, setGifSearch] = useState('');
+  const [gifs, setGifs] = useState<string[]>([]);
+  const [isGifPopoverOpen, setIsGifPopoverOpen] = useState(false);
+
+  // Edit Message
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
   
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -69,6 +87,28 @@ const Messages = () => {
   }, [token]);
 
   useEffect(() => {
+    if (!gifSearch.trim()) {
+      setGifs([]);
+      return;
+    }
+    const fetchGifs = async () => {
+      try {
+        // Use provided API key or a fallback trending endpoint / demo key
+        const apiKey = import.meta.env.VITE_GIPHY_API_KEY || 'lR7L81vCg2tK1G1J3yv05K57T2L2bB1O'; // Public beta key
+        const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(gifSearch)}&limit=12`);
+        if (res.ok) {
+          const data = await res.json();
+          setGifs(data.data.map((g: any) => g.images.fixed_height.url));
+        }
+      } catch (err) {
+        console.error("Giphy error", err);
+      }
+    };
+    const timer = setTimeout(fetchGifs, 500);
+    return () => clearTimeout(timer);
+  }, [gifSearch]);
+
+  useEffect(() => {
     // Setup Socket.IO
     socketRef.current = io((import.meta.env.VITE_API_URL || 'http://localhost:8000'), {
       query: { username: user?.username || 'user' }
@@ -79,36 +119,41 @@ const Messages = () => {
     }
 
     socketRef.current.on('new_group_message', (msg: Message) => {
-      if (activeTab === 'groups' && msg.group_id === activeChatId) {
+      if (activeTab === 'groups' && (msg as any).group_id === activeChatId) {
         setMessages(prev => [...prev, msg]);
       } else if (msg.sender_id !== parseInt(user?.id || '0')) {
         audioRef.current.play().catch(e => console.log(e));
-        setUnreadGroups(prev => ({ ...prev, [msg.group_id]: (prev[msg.group_id] || 0) + 1 }));
+        setUnreadGroups(prev => ({ ...prev, [(msg as any).group_id]: (prev[(msg as any).group_id] || 0) + 1 }));
       }
-      // Reorder groups
       setGroups(prev => {
-        const target = prev.find(g => g.id === msg.group_id);
-        if (target) return [target, ...prev.filter(g => g.id !== msg.group_id)];
+        const target = prev.find(g => g.id === (msg as any).group_id);
+        if (target) return [target, ...prev.filter(g => g.id !== (msg as any).group_id)];
         return prev;
       });
     });
 
     socketRef.current.on('new_direct_message', (msg: Message) => {
-      const isRelevantDM = (activeTab === 'dms') && (msg.sender_id === activeChatId || msg.receiver_id === activeChatId);
+      const isRelevantDM = (activeTab === 'dms') && (msg.sender_id === activeChatId || (msg as any).receiver_id === activeChatId);
       if (isRelevantDM) {
         setMessages(prev => [...prev, msg]);
       } else if (msg.sender_id !== parseInt(user?.id || '0')) {
         audioRef.current.play().catch(e => console.log(e));
         setUnreadDms(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] || 0) + 1 }));
       }
-      
-      // Reorder dms
-      const otherUserId = msg.sender_id === parseInt(user?.id || '0') ? msg.receiver_id : msg.sender_id;
+      const otherUserId = msg.sender_id === parseInt(user?.id || '0') ? (msg as any).receiver_id : msg.sender_id;
       setDmUsers(prev => {
         const target = prev.find(u => u.id === otherUserId);
         if (target) return [target, ...prev.filter(u => u.id !== otherUserId)];
         return prev;
       });
+    });
+
+    socketRef.current.on('message_edited', (data: any) => {
+      setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, content: data.newContent, is_edited: true } : m));
+    });
+
+    socketRef.current.on('message_deleted', (data: any) => {
+      setMessages(prev => prev.filter(m => m.id !== data.messageId));
     });
 
     return () => {
@@ -141,7 +186,6 @@ const Messages = () => {
       try {
         let url = '';
         if (activeTab === 'groups') {
-          // Join group room via socket to receive live updates
           socketRef.current?.emit('join_group_room', { groupId: activeChatId });
           url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/messages`;
         } else {
@@ -155,7 +199,6 @@ const Messages = () => {
         if (res.ok) {
           setMessages(await res.json());
         } else if (res.status === 403 && activeTab === 'groups') {
-          // Auto-join group if not a member for demo purposes
           await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/join`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -196,6 +239,28 @@ const Messages = () => {
     }
     
     setNewMessage('');
+    setIsGifPopoverOpen(false);
+  };
+
+  const submitEdit = (messageId: number) => {
+    if (!editContent.trim()) return;
+    socketRef.current?.emit('edit_message', {
+      messageId,
+      type: activeTab === 'groups' ? 'group' : 'direct',
+      newContent: editContent,
+      senderId: user?.id
+    });
+    setEditingMessageId(null);
+  };
+
+  const deleteMessage = (messageId: number) => {
+    if (confirm("Delete this message?")) {
+      socketRef.current?.emit('delete_message', {
+        messageId,
+        type: activeTab === 'groups' ? 'group' : 'direct',
+        senderId: user?.id
+      });
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -222,6 +287,35 @@ const Messages = () => {
       toast({ title: 'Upload Failed', description: 'Network error.', variant: 'destructive' });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      audioChunks.current = [];
+      mediaRecorder.current.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.current.push(e.data);
+      };
+      mediaRecorder.current.onstop = () => {
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        const file = new File([audioBlob], 'voice_message.webm', { type: 'audio/webm' });
+        handleFileUpload(file);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      mediaRecorder.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Microphone Error', description: 'Could not access microphone. Please allow permissions.', variant: 'destructive' });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder.current && isRecording) {
+      mediaRecorder.current.stop();
+      setIsRecording(false);
     }
   };
 
@@ -286,7 +380,16 @@ const Messages = () => {
   };
 
   const renderMedia = (url: string) => {
-    const isVideo = url.match(/\.(mp4|webm|ogg)$/i) || url.includes('/video/upload/');
+    const isAudio = url.match(/\.(mp3|wav|ogg|webm)$/i) || (url.includes('/video/upload/') && url.endsWith('.webm'));
+    if (isAudio) {
+      return (
+        <audio controls className="w-full mt-2 h-10 max-w-[240px]">
+          <source src={url} />
+          Your browser does not support audio.
+        </audio>
+      );
+    }
+    const isVideo = url.match(/\.(mp4)$/i) || (url.includes('/video/upload/') && url.endsWith('.mp4'));
     if (isVideo) {
       return (
         <video controls className="max-w-full rounded-md mt-2 max-h-64">
@@ -295,7 +398,16 @@ const Messages = () => {
         </video>
       );
     }
-    return <img src={url} alt="media" className="max-w-full rounded-md mt-2 max-h-64 object-cover" />;
+    return (
+      <Dialog>
+        <DialogTrigger asChild>
+          <img src={url} alt="media" className="max-w-full rounded-md mt-2 max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity" />
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl w-full p-1 bg-transparent border-none flex justify-center">
+          <img src={url} alt="media fullscreen" className="max-w-full max-h-[80vh] object-contain rounded-md" />
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   return (
@@ -417,18 +529,66 @@ const Messages = () => {
               <div className="space-y-4">
                 {messages.map((msg, idx) => {
                   const isMine = msg.sender_id === parseInt(user?.id || '0');
+                  const isEditing = editingMessageId === msg.id;
+
                   return (
-                    <div key={idx} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                    <div key={idx} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} group relative`}>
                       {!isMine && activeTab === 'groups' && msg.sender && (
                         <span className="text-xs text-muted-foreground ml-1 mb-1">{msg.sender.username}</span>
                       )}
-                      <div className={`px-4 py-2 rounded-2xl max-w-[80%] ${isMine ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-secondary text-secondary-foreground rounded-tl-sm'}`}>
-                        {msg.content && <p>{msg.content}</p>}
-                        {msg.media_url && renderMedia(msg.media_url)}
+                      
+                      <div className="flex items-center gap-2">
+                        {isMine && !isEditing && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setEditingMessageId(msg.id);
+                                setEditContent(msg.content || '');
+                              }}>
+                                <Edit2 className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteMessage(msg.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Unsend
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+
+                        <div className={`px-4 py-2 rounded-2xl max-w-[80%] ${isMine ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-secondary text-secondary-foreground rounded-tl-sm'}`}>
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <Input 
+                                value={editContent} 
+                                onChange={e => setEditContent(e.target.value)} 
+                                className="h-7 text-sm text-foreground bg-background"
+                                autoFocus
+                                onKeyDown={e => e.key === 'Enter' && submitEdit(msg.id)}
+                              />
+                              <Button size="sm" onClick={() => submitEdit(msg.id)} className="h-7 px-2">Save</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingMessageId(null)} className="h-7 px-2 text-primary-foreground hover:bg-primary/80 hover:text-white">Cancel</Button>
+                            </div>
+                          ) : (
+                            <>
+                              {msg.content && <p>{msg.content}</p>}
+                              {msg.media_url && renderMedia(msg.media_url)}
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+
+                      <div className="flex items-center gap-1 mt-1 mx-1">
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {msg.is_edited && !isEditing && (
+                          <span className="text-[10px] text-muted-foreground italic">(edited)</span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -449,25 +609,70 @@ const Messages = () => {
                   }} 
                   accept="image/*,video/*"
                 />
+                
                 <Button 
                   type="button" 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
+                  disabled={isUploading || isRecording}
+                  title="Attach file"
                 >
-                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                  <Paperclip className="w-4 h-4" />
                 </Button>
+
+                <Popover open={isGifPopoverOpen} onOpenChange={setIsGifPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" disabled={isUploading || isRecording} title="GIFs">
+                      <Smile className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-72 p-2">
+                    <Input 
+                      placeholder="Search GIFs..." 
+                      value={gifSearch} 
+                      onChange={e => setGifSearch(e.target.value)} 
+                      className="mb-2 h-8 text-sm"
+                    />
+                    <div className="grid grid-cols-3 gap-1 overflow-y-auto max-h-48">
+                      {gifs.map((url, i) => (
+                        <img 
+                          key={i} 
+                          src={url} 
+                          alt="gif" 
+                          className="w-full h-16 object-cover rounded cursor-pointer hover:opacity-80"
+                          onClick={() => handleSendMessage(undefined, url)}
+                        />
+                      ))}
+                      {gifSearch && gifs.length === 0 && <p className="text-xs text-muted-foreground col-span-3 text-center py-4">No GIFs found</p>}
+                      {!gifSearch && <p className="text-xs text-muted-foreground col-span-3 text-center py-4">Type to search GIPHY</p>}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={`Message ${activeTab === 'groups' ? 'group' : 'user'}... (or drag & drop media)`}
+                  placeholder={`Message ${activeTab === 'groups' ? 'group' : 'user'}... (or drag & drop)`}
                   className="flex-1 bg-background"
-                  disabled={isUploading}
+                  disabled={isUploading || isRecording}
                 />
-                <Button type="submit" size="icon" disabled={(!newMessage.trim() && !isUploading) || isUploading}>
-                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
+
+                {isRecording ? (
+                  <Button type="button" variant="destructive" size="icon" onClick={stopRecording} className="animate-pulse">
+                    <Square className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button type="button" variant="ghost" size="icon" onClick={startRecording} disabled={isUploading || !!newMessage.trim()}>
+                    <Mic className="w-4 h-4" />
+                  </Button>
+                )}
+
+                {(!isRecording && (newMessage.trim() || isUploading)) && (
+                  <Button type="submit" size="icon" disabled={isUploading}>
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </Button>
+                )}
               </form>
             </div>
           </>

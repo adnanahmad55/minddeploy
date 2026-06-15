@@ -198,6 +198,7 @@ class GroupMessageOut(BaseModel):
     sender_id: int
     content: Optional[str] = None
     media_url: Optional[str] = None
+    is_edited: Optional[bool] = False
     timestamp: datetime
     sender: UserOut
 
@@ -214,6 +215,7 @@ class DirectMessageOut(BaseModel):
     receiver_id: int
     content: Optional[str] = None
     media_url: Optional[str] = None
+    is_edited: Optional[bool] = False
     timestamp: datetime
 
     class Config:

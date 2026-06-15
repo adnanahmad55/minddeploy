@@ -265,3 +265,57 @@ async def send_direct_message(sid, data):
             await sio.emit('new_direct_message', msg_dict, room=f"user_{receiver_id}")
     except Exception as e:
         print(f"Error in send_direct_message: {e}")
+
+@sio.event
+async def edit_message(sid, data):
+    message_id = data.get('messageId')
+    msg_type = data.get('type')
+    new_content = data.get('newContent')
+    sender_id = data.get('senderId')
+
+    try:
+        with database.SessionLocal() as db:
+            if msg_type == 'group':
+                msg = db.query(models.GroupMessage).filter(models.GroupMessage.id == message_id, models.GroupMessage.sender_id == sender_id).first()
+                if msg:
+                    msg.content = new_content
+                    msg.is_edited = True
+                    db.commit()
+                    await sio.emit('message_edited', {'messageId': message_id, 'type': 'group', 'newContent': new_content, 'groupId': msg.group_id}, room=f"group_{msg.group_id}")
+            elif msg_type == 'direct':
+                msg = db.query(models.DirectMessage).filter(models.DirectMessage.id == message_id, models.DirectMessage.sender_id == sender_id).first()
+                if msg:
+                    msg.content = new_content
+                    msg.is_edited = True
+                    db.commit()
+                    await sio.emit('message_edited', {'messageId': message_id, 'type': 'direct', 'newContent': new_content, 'senderId': msg.sender_id, 'receiverId': msg.receiver_id}, room=f"user_{msg.sender_id}")
+                    await sio.emit('message_edited', {'messageId': message_id, 'type': 'direct', 'newContent': new_content, 'senderId': msg.sender_id, 'receiverId': msg.receiver_id}, room=f"user_{msg.receiver_id}")
+    except Exception as e:
+        print(f"Error editing message: {e}")
+
+@sio.event
+async def delete_message(sid, data):
+    message_id = data.get('messageId')
+    msg_type = data.get('type')
+    sender_id = data.get('senderId')
+
+    try:
+        with database.SessionLocal() as db:
+            if msg_type == 'group':
+                msg = db.query(models.GroupMessage).filter(models.GroupMessage.id == message_id, models.GroupMessage.sender_id == sender_id).first()
+                if msg:
+                    group_id = msg.group_id
+                    db.delete(msg)
+                    db.commit()
+                    await sio.emit('message_deleted', {'messageId': message_id, 'type': 'group', 'groupId': group_id}, room=f"group_{group_id}")
+            elif msg_type == 'direct':
+                msg = db.query(models.DirectMessage).filter(models.DirectMessage.id == message_id, models.DirectMessage.sender_id == sender_id).first()
+                if msg:
+                    s_id = msg.sender_id
+                    r_id = msg.receiver_id
+                    db.delete(msg)
+                    db.commit()
+                    await sio.emit('message_deleted', {'messageId': message_id, 'type': 'direct', 'senderId': s_id, 'receiverId': r_id}, room=f"user_{s_id}")
+                    await sio.emit('message_deleted', {'messageId': message_id, 'type': 'direct', 'senderId': s_id, 'receiverId': r_id}, room=f"user_{r_id}")
+    except Exception as e:
+        print(f"Error deleting message: {e}")

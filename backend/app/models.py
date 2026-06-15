@@ -1,5 +1,5 @@
 # models.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, func, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -132,6 +132,7 @@ class GroupMessage(Base):
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=True)
     media_url = Column(String, nullable=True)
+    is_edited = Column(Boolean, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     group = relationship("ChatGroup", back_populates="messages")
@@ -146,6 +147,7 @@ class DirectMessage(Base):
     receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=True)
     media_url = Column(String, nullable=True)
+    is_edited = Column(Boolean, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     sender = relationship("User", foreign_keys=[sender_id])
