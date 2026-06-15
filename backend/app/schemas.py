@@ -196,7 +196,8 @@ class GroupMessageOut(BaseModel):
     id: int
     group_id: int
     sender_id: int
-    content: str
+    content: Optional[str] = None
+    media_url: Optional[str] = None
     timestamp: datetime
     sender: UserOut
 
@@ -211,7 +212,8 @@ class DirectMessageOut(BaseModel):
     id: int
     sender_id: int
     receiver_id: int
-    content: str
+    content: Optional[str] = None
+    media_url: Optional[str] = None
     timestamp: datetime
 
     class Config:

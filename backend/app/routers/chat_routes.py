@@ -1,7 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
+import cloudinary
+import cloudinary.uploader
+import os
+
 from .. import database, models, schemas, auth
+
+# Configure Cloudinary if keys are present
+if os.getenv("CLOUDINARY_KEY"):
+    cloudinary.config(
+        cloud_name=os.getenv("CLOUDINARY_NAME"),
+        api_key=os.getenv("CLOUDINARY_KEY"),
+        api_secret=os.getenv("CLOUDINARY_SECRET")
+    )
 
 router = APIRouter(
     prefix="/chat",
@@ -64,6 +76,42 @@ def get_group_messages(group_id: int, db: Session = Depends(database.get_db), cu
         
     messages = db.query(models.GroupMessage).filter(models.GroupMessage.group_id == group_id).order_by(models.GroupMessage.timestamp.asc()).all()
     return messages
+
+@router.post("/groups/{group_id}/add_user")
+def add_user_to_group(group_id: int, username: str, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    group = db.query(models.ChatGroup).filter(models.ChatGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+        
+    # Optional: check if current_user is the owner or just a member
+    # For now, anyone in the group can add others
+    is_member = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == current_user.id).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="You must be a member to add others")
+        
+    user_to_add = db.query(models.User).filter(models.User.username == username).first()
+    if not user_to_add:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    existing = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == user_to_add.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User is already a member")
+        
+    member = models.GroupMember(group_id=group_id, user_id=user_to_add.id)
+    db.add(member)
+    db.commit()
+    return {"message": f"{username} added successfully"}
+
+@router.post("/upload")
+def upload_chat_media(file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user)):
+    if not os.getenv("CLOUDINARY_KEY"):
+        raise HTTPException(status_code=500, detail="Cloudinary not configured on the server")
+        
+    try:
+        result = cloudinary.uploader.upload(file.file, resource_type="auto")
+        return {"media_url": result.get("secure_url")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # DMs
 @router.get("/dms/{user_id}/messages", response_model=List[schemas.DirectMessageOut])

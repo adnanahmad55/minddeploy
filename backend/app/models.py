@@ -130,7 +130,8 @@ class GroupMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("chat_groups.id"), nullable=False)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    content = Column(Text, nullable=False)
+    content = Column(Text, nullable=True)
+    media_url = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     group = relationship("ChatGroup", back_populates="messages")
@@ -143,7 +144,8 @@ class DirectMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    content = Column(Text, nullable=False)
+    content = Column(Text, nullable=True)
+    media_url = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     sender = relationship("User", foreign_keys=[sender_id])

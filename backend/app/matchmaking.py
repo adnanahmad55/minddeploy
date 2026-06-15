@@ -202,6 +202,7 @@ async def send_group_message(sid, data):
     group_id = data.get('groupId')
     sender_id = data.get('senderId')
     content = data.get('content')
+    media_url = data.get('media_url')
 
     try:
         with database.SessionLocal() as db:
@@ -210,7 +211,7 @@ async def send_group_message(sid, data):
                 await sio.emit('error', {'detail': 'Not authorized.'}, room=sid)
                 return
 
-            new_msg = models.GroupMessage(group_id=group_id, sender_id=sender_id, content=content)
+            new_msg = models.GroupMessage(group_id=group_id, sender_id=sender_id, content=content, media_url=media_url)
             db.add(new_msg)
             db.commit()
             db.refresh(new_msg)
@@ -221,6 +222,7 @@ async def send_group_message(sid, data):
                 "group_id": new_msg.group_id,
                 "sender_id": new_msg.sender_id,
                 "content": new_msg.content,
+                "media_url": new_msg.media_url,
                 "timestamp": new_msg.timestamp.isoformat(),
                 "sender": {"id": user.id, "username": user.username, "elo": user.elo, "email": user.email, "mind_tokens": user.mind_tokens}
             }
@@ -240,10 +242,11 @@ async def send_direct_message(sid, data):
     sender_id = data.get('senderId')
     receiver_id = data.get('receiverId')
     content = data.get('content')
+    media_url = data.get('media_url')
 
     try:
         with database.SessionLocal() as db:
-            new_msg = models.DirectMessage(sender_id=sender_id, receiver_id=receiver_id, content=content)
+            new_msg = models.DirectMessage(sender_id=sender_id, receiver_id=receiver_id, content=content, media_url=media_url)
             db.add(new_msg)
             db.commit()
             db.refresh(new_msg)
@@ -253,6 +256,7 @@ async def send_direct_message(sid, data):
                 "sender_id": new_msg.sender_id,
                 "receiver_id": new_msg.receiver_id,
                 "content": new_msg.content,
+                "media_url": new_msg.media_url,
                 "timestamp": new_msg.timestamp.isoformat()
             }
 
