@@ -22,7 +22,7 @@ const Posts = () => {
   const [newPost, setNewPost] = useState('');
 
   const fetchPosts = () => {
-    fetch(`http://localhost:8000/threads/${threadId}/posts`)
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/threads/${threadId}/posts`)
       .then((res) => res.json())
       .then((data) => setPosts(data));
   };
@@ -33,7 +33,7 @@ const Posts = () => {
 
   const handleCreatePost = async () => {
     try {
-      const response = await fetch('http://localhost:8000/posts', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000')}/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

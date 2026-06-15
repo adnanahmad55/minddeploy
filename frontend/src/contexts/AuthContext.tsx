@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
 
-  const API_BASE = 'http://localhost:8000'; // Replace with your backend URL
+  const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000'); // Replace with your backend URL
 
   useEffect(() => {
     const initAuth = async () => {

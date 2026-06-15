@@ -14,7 +14,7 @@ const Threads = () => {
   const [threads, setThreads] = useState<Thread[]>([]);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/forums/${forumId}/threads`)
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/forums/${forumId}/threads`)
       .then((res) => res.json())
       .then((data) => setThreads(data));
   }, [forumId]);

@@ -14,7 +14,7 @@ const Forums = () => {
   const [forums, setForums] = useState<Forum[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/forums/')
+    fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000')}/forums/`)
       .then((res) => res.json())
       .then((data) => setForums(data));
   }, []);

@@ -44,12 +44,12 @@ const Messages = () => {
     // Fetch initial groups and DM users
     const fetchSidebarData = async () => {
       try {
-        const groupsRes = await fetch('http://localhost:8000/chat/groups/all', {
+        const groupsRes = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000')}/chat/groups/all`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (groupsRes.ok) setGroups(await groupsRes.json());
 
-        const dmsRes = await fetch('http://localhost:8000/users/all', {
+        const dmsRes = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000')}/users/all`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (dmsRes.ok) setDmUsers(await dmsRes.json());
@@ -62,7 +62,7 @@ const Messages = () => {
 
   useEffect(() => {
     // Setup Socket.IO
-    socketRef.current = io('http://localhost:8000', {
+    socketRef.current = io((import.meta.env.VITE_API_URL || 'http://localhost:8000'), {
       query: { username: user?.username || 'user' }
     });
 
@@ -99,9 +99,9 @@ const Messages = () => {
         if (activeTab === 'groups') {
           // Join group room via socket to receive live updates
           socketRef.current?.emit('join_group_room', { groupId: activeChatId });
-          url = `http://localhost:8000/chat/groups/${activeChatId}/messages`;
+          url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/messages`;
         } else {
-          url = `http://localhost:8000/chat/dms/${activeChatId}/messages`;
+          url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/dms/${activeChatId}/messages`;
         }
 
         const res = await fetch(url, {
@@ -112,7 +112,7 @@ const Messages = () => {
           setMessages(await res.json());
         } else if (res.status === 403 && activeTab === 'groups') {
           // Auto-join group if not a member for demo purposes
-          await fetch(`http://localhost:8000/chat/groups/${activeChatId}/join`, {
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/join`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -156,7 +156,7 @@ const Messages = () => {
     const name = prompt("Enter new group name:");
     if (!name) return;
     try {
-      const res = await fetch('http://localhost:8000/chat/groups', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000')}/chat/groups`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

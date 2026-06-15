@@ -12,7 +12,7 @@ const Redeem = () => {
   const handleRedeem = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/tokens/redeem', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000')}/tokens/redeem`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

@@ -14,7 +14,7 @@ const Leaderboard = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/leaderboard/')
+    fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000')}/leaderboard/`)
       .then((res) => res.json())
       .then((data) => setLeaderboard(data));
   }, []);
