@@ -432,12 +432,12 @@ const Messages = () => {
 
   const renderMedia = (url: string) => {
     const cleanUrl = url.split('?')[0];
-    const isAudio = cleanUrl.match(/\.(mp3|wav|ogg|webm|m4a|aac)$/i) || url.includes('type=audio');
+    const isAudio = cleanUrl.match(/\.(mp3|wav|ogg|webm|m4a|aac)$/i) || url.includes('type=audio') || (url.includes('/video/upload/') && !cleanUrl.match(/\.(mp4|mov|avi|mkv|jpg|jpeg|png|gif|webp)$/i));
     const isVideo = cleanUrl.match(/\.(mp4|mov|avi|mkv)$/i) && !isAudio;
     
     if (isAudio) {
       return (
-        <audio controls className="w-full h-10 max-w-[240px] rounded-full">
+        <audio controls className="w-full max-w-[240px] mt-1">
           <source src={url} />
           Your browser does not support audio.
         </audio>
