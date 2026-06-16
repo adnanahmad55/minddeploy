@@ -429,7 +429,7 @@ const Messages = () => {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-64 border-r border-border/30 bg-card/30 flex flex-col">
+        <div className={`w-full md:w-64 border-r border-border/30 bg-card/30 flex-col ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-border/30 flex gap-2">
             <Button 
               variant={activeTab === 'groups' ? 'default' : 'ghost'} 
@@ -503,11 +503,11 @@ const Messages = () => {
             </div>
           )}
         </ScrollArea>
-      </div>
+        </div>
 
       {/* Main Chat Area */}
       <div 
-        className="flex-1 flex flex-col bg-background/50 relative"
+        className={`flex-1 flex-col bg-background/50 relative ${!activeChatId ? 'hidden md:flex' : 'flex'}`}
         onDragOver={onDragOver}
         onDrop={onDrop}
       >
@@ -516,6 +516,9 @@ const Messages = () => {
             <CardHeader className="border-b border-border/30 bg-card/50 py-4">
               <CardTitle className="text-lg flex items-center justify-between">
                 <div className="flex items-center">
+                  <Button variant="ghost" size="icon" className="md:hidden mr-2" onClick={() => setActiveChatId(null)}>
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
                   {activeTab === 'groups' ? (
                     <><Hash className="w-5 h-5 mr-2 text-primary" /> {groups.find(g => g.id === activeChatId)?.name}</>
                   ) : (
