@@ -79,7 +79,7 @@ const Register = () => {
       const data = await res.json();
       
       if (res.ok) {
-        toast({ title: "Registration successful", description: "Welcome to MindDeploy!" });
+        toast({ title: "Registration successful", description: "Welcome to MindGrid!" });
         navigate('/login');
       } else {
         toast({ title: "Registration failed", description: data.detail || "Invalid OTP or credentials.", variant: "destructive" });

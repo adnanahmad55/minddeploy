@@ -305,111 +305,133 @@ const Debate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg flex flex-col">
-      <header className="border-b border-border/50 bg-card/20 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={forfeit}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
+    <div className="h-screen overflow-hidden bg-background flex flex-col relative selection:bg-cyber-red/30">
+      {/* Abstract Arena Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyber-red/10 via-background to-background"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay"></div>
+      </div>
 
-            <div className="flex items-center space-x-3">
-              <Brain className="h-6 w-6 text-cyber-red" />
-              <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Neural Battle
-              </h1>
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/60 shadow-[0_4px_30px_rgba(0,0,0,0.5)] border-b border-white/5">
+        <header className="relative z-10 border-b border-white/5 bg-black/20">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" onClick={forfeit}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+
+              <div className="flex items-center space-x-3">
+                <Brain className="h-6 w-6 text-cyber-red" />
+                <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                  Neural Battle
+                </h1>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4 text-cyber-gold" />
+                <span className={`font-mono text-lg ${timeLeft < 60 ? 'text-cyber-red' : 'text-cyber-gold'}`}>
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-cyber-gold" />
-              <span className={`font-mono text-lg ${timeLeft < 60 ? 'text-cyber-red' : 'text-cyber-gold'}`}>
-                {formatTime(timeLeft)}
-              </span>
+            <div className="mt-3 text-center">
+              <p className="text-sm text-muted-foreground">Debate Topic:</p>
+              <p className="text-lg font-semibold text-foreground">{topic}</p>
             </div>
           </div>
+        </header>
 
-          <div className="mt-3 text-center">
-            <p className="text-sm text-muted-foreground">Debate Topic:</p>
-            <p className="text-lg font-semibold text-foreground">{topic}</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="border-b border-border/50 bg-muted/10">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-cyber-blue/20 rounded-lg">
-                <Shield className="h-5 w-5 text-cyber-blue" />
+        <div className="border-b border-white/5 bg-black/40 backdrop-blur-md">
+        <div className="container mx-auto px-4 py-2 sm:py-3">
+          <div className="flex items-center justify-between max-w-3xl mx-auto">
+            <div className="flex items-center space-x-3 w-1/3">
+              <div className="p-1.5 sm:p-2 bg-cyber-blue/10 rounded-lg shadow-[0_0_10px_rgba(0,100,255,0.2)]">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-cyber-blue" />
               </div>
-              <div>
-                <p className="font-semibold text-foreground">{user?.username}</p>
-                <p className="text-sm text-muted-foreground">{user?.elo} ELO</p>
+              <div className="truncate">
+                <p className="font-semibold text-foreground text-sm sm:text-base truncate">{user?.username}</p>
+                <p className="text-xs sm:text-sm text-cyber-blue/80 font-mono">{user?.elo} ELO</p>
               </div>
             </div>
 
-            <div className="text-center">
-              <div className="text-2xl">⚔️</div>
-              <p className="text-xs text-muted-foreground">VS</p>
+            <div className="text-center w-1/3 flex flex-col items-center">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-cyber-blue/20 to-cyber-red/20 flex items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                <span className="text-xs sm:text-sm font-black italic tracking-widest bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent">VS</span>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <div>
-                <p className="font-semibold text-foreground text-right">{opponent.username}</p>
-                <p className="text-sm text-muted-foreground text-right">{opponent.elo} ELO</p>
+            <div className="flex items-center space-x-3 w-1/3 justify-end">
+              <div className="text-right truncate">
+                <p className="font-semibold text-foreground text-sm sm:text-base truncate">{opponent.username}</p>
+                <p className="text-xs sm:text-sm text-cyber-red/80 font-mono">{opponent.elo} ELO</p>
               </div>
-              <div className={`p-2 rounded-lg ${opponent.is_ai ? 'bg-cyber-gold/20' : 'bg-cyber-red/20'}`}>
+              <div className={`p-1.5 sm:p-2 rounded-lg shadow-[0_0_10px_rgba(255,0,0,0.2)] ${opponent.is_ai ? 'bg-cyber-gold/10' : 'bg-cyber-red/10'}`}>
                 {opponent.is_ai ? (
-                  <Bot className="h-5 w-5 text-cyber-gold" />
+                  <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-cyber-gold" />
                 ) : (
-                  <Sword className="h-5 w-5 text-cyber-red" />
+                  <Sword className="h-4 w-4 sm:h-5 sm:w-5 text-cyber-red" />
                 )}
               </div>
             </div>
           </div>
         </div>
       </div>
+      </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full flex flex-col container mx-auto px-4 py-4">
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+      <div className="flex-1 overflow-hidden relative z-0">
+        <div className="h-full flex flex-col container mx-auto px-4 py-4 max-w-4xl">
+          <div className="flex-1 overflow-y-auto space-y-6 mb-4 pr-2 custom-scrollbar">
             {messages.length === 0 && (
-              <div className="text-center py-12">
-                <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  The debate arena awaits your opening argument...
+              <div className="text-center py-16 flex flex-col items-center">
+                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(255,255,255,0.05)] border border-white/10 relative overflow-hidden">
+                   <div className="absolute inset-0 bg-cyber-blue/20 blur-xl"></div>
+                   <Brain className="h-10 w-10 text-cyber-blue relative z-10 animate-pulse" />
+                </div>
+                <p className="text-foreground/80 font-medium text-lg tracking-wide">
+                  The Neural Arena Awaits
+                </p>
+                <p className="text-muted-foreground text-sm mt-2">
+                  Launch your opening argument.
                 </p>
               </div>
             )}
 
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.sender_type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <Card className={`max-w-[70%] p-4 ${
-                  message.sender_type === 'user'
-                    ? 'bg-gradient-primary text-primary-foreground'
-                    : 'bg-gradient-card border-border/50'
-                }`}>
-                  <p className="text-sm leading-relaxed">{message.content}</p>
-                  <p className={`text-xs mt-2 opacity-70 ${
-                    message.sender_type === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
+            {messages.map((message) => {
+              const isUser = message.sender_type === 'user';
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  <Card className={`max-w-[85%] sm:max-w-[75%] p-4 border-none shadow-lg backdrop-blur-md relative overflow-hidden ${
+                    isUser
+                      ? 'bg-gradient-to-br from-cyber-blue/90 to-blue-600 text-white rounded-2xl rounded-tr-sm'
+                      : 'bg-white/10 text-foreground border border-white/10 rounded-2xl rounded-tl-sm shadow-[0_0_15px_rgba(0,0,0,0.5)]'
                   }`}>
-                    {new Date(message.timestamp).toLocaleTimeString()}
-                  </p>
-                </Card>
-              </div>
-            ))}
+                    {/* Subtle inner glow for AI messages */}
+                    {!isUser && <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>}
+                    
+                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap relative z-10">{message.content}</p>
+                    <p className={`text-[10px] mt-3 font-mono tracking-wider relative z-10 flex justify-between items-center ${
+                      isUser ? 'text-white/70' : 'text-muted-foreground'
+                    }`}>
+                      <span className="uppercase">{isUser ? 'You' : opponent.username}</span>
+                      <span>{new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </p>
+                  </Card>
+                </div>
+              );
+            })}
 
             {isTyping && (
               <div className="flex justify-start">
-                <Card className="bg-gradient-card border-border/50 p-4">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-cyber-gold rounded-full animate-pulse"></div>
-                    <div className="w-2 h-2 bg-cyber-gold rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-cyber-gold rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                <Card className="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-sm backdrop-blur-md flex items-center h-[52px]">
+                  <div className="flex space-x-1.5 items-center justify-center">
+                    <div className="w-2 h-2 bg-cyber-red rounded-full animate-bounce shadow-[0_0_5px_rgba(255,0,0,0.8)]"></div>
+                    <div className="w-2 h-2 bg-cyber-red rounded-full animate-bounce shadow-[0_0_5px_rgba(255,0,0,0.8)]" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-cyber-red rounded-full animate-bounce shadow-[0_0_5px_rgba(255,0,0,0.8)]" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                 </Card>
               </div>
@@ -418,32 +440,44 @@ const Debate = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="border-t border-border/50 pt-4">
-            <div className="flex space-x-3">
-              <Input
+          <div className="pt-4 border-t border-white/10">
+            <div className="flex items-end gap-3 bg-white/5 p-2 rounded-2xl border border-white/10 backdrop-blur-md focus-within:border-cyber-blue/50 focus-within:bg-white/10 transition-all">
+              <textarea
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={isDebateActive ? "Enter your argument..." : "Debate has ended"}
+                onKeyDown={handleKeyPress}
+                placeholder={isDebateActive ? "Formulate your argument..." : "Debate has ended."}
                 disabled={!isDebateActive}
-                className="flex-1 bg-input/50 border-border/50 focus:border-cyber-red"
+                className="flex-1 bg-transparent border-none resize-none min-h-[44px] max-h-32 px-3 py-3 text-sm focus:outline-none focus:ring-0 custom-scrollbar text-foreground placeholder:text-muted-foreground/70"
+                rows={1}
+                style={{ height: "auto" }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = "auto";
+                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                }}
               />
               <Button
                 onClick={sendMessage}
                 disabled={!currentMessage.trim() || !isDebateActive}
                 size="icon"
+                className={`h-11 w-11 rounded-xl mb-0.5 shrink-0 transition-all ${
+                  currentMessage.trim() && isDebateActive 
+                  ? 'bg-cyber-blue hover:bg-cyber-blue/90 text-white shadow-[0_0_15px_rgba(0,100,255,0.4)]' 
+                  : 'bg-white/10 text-muted-foreground'
+                }`}
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               </Button>
             </div>
 
             {isDebateActive && (
-              <div className="flex justify-between items-center mt-3">
-                <p className="text-xs text-muted-foreground">
-                  Press Enter to send • Shift+Enter for new line
+              <div className="flex justify-between items-center mt-4 px-2">
+                <p className="text-[11px] text-muted-foreground font-medium tracking-wide">
+                  ENTER <span className="opacity-50 mx-1">to send</span> SHIFT+ENTER <span className="opacity-50 mx-1">for new line</span>
                 </p>
-                <Button variant="outline" size="sm" onClick={endDebate}>
-                  End Debate
+                <Button variant="outline" size="sm" onClick={endDebate} className="border-cyber-red/30 text-cyber-red hover:bg-cyber-red/10 hover:text-cyber-red">
+                  Concede & End
                 </Button>
               </div>
             )}

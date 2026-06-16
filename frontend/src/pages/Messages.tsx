@@ -657,21 +657,27 @@ const Messages = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col text-foreground">
-      {/* Top Navigation */}
-      <div className="p-4 border-b border-border/30 bg-card/50 flex items-center">
-        <Button variant="ghost" asChild className="mr-4">
-          <Link to="/dashboard">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-          </Link>
-        </Button>
-        <h1 className="text-xl font-semibold">Messages</h1>
+    <div className="h-screen bg-background flex flex-col text-foreground overflow-hidden relative selection:bg-cyber-blue/30">
+      {/* Abstract Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[5%] left-[5%] w-[40%] h-[40%] bg-cyber-blue/5 blur-[120px] rounded-full mix-blend-screen"></div>
+        <div className="absolute bottom-[5%] right-[5%] w-[40%] h-[40%] bg-cyber-purple/5 blur-[120px] rounded-full mix-blend-screen"></div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      {/* Top Navigation */}
+      <div className="relative z-10 p-4 border-b border-white/5 bg-background/60 backdrop-blur-xl flex items-center shadow-sm">
+        <Button variant="ghost" asChild className="mr-4 hover:bg-white/10 transition-colors">
+          <Link to="/dashboard">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Arena
+          </Link>
+        </Button>
+        <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">Neural Comms</h1>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden relative z-10 p-2 sm:p-4 gap-2 sm:gap-4 max-w-7xl mx-auto w-full">
         {/* Sidebar */}
-        <div className={`w-full md:w-64 border-r border-border/30 bg-card/30 flex-col ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
-          <div className="p-4 border-b border-border/30 flex gap-2">
+        <div className={`w-full md:w-80 border border-white/5 bg-white/5 backdrop-blur-md rounded-2xl flex-col shadow-lg overflow-hidden ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
+          <div className="p-3 border-b border-white/5 flex gap-2 bg-black/20">
             <Button 
               variant={activeTab === 'groups' ? 'default' : 'ghost'} 
               className="flex-1"
@@ -748,7 +754,7 @@ const Messages = () => {
 
       {/* Main Chat Area */}
       <div 
-        className={`flex-1 flex-col bg-background/50 relative ${!activeChatId ? 'hidden md:flex' : 'flex'}`}
+        className={`flex-1 flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/5 shadow-lg relative overflow-hidden ${!activeChatId ? 'hidden md:flex' : 'flex'}`}
         onDragOver={onDragOver}
         onDrop={onDrop}
       >

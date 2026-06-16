@@ -46,9 +46,87 @@ interface DebateResult {
 
 // Helper function to convert markdown to HTML
 const renderMarkdown = (markdownText: string) => {
-  let html = markdownText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\n/g, '<br />'); // Convert newlines to HTML breaks
-  return html;
+  if (!markdownText) return '';
+  
+  let text = markdownText.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const lines = text.split('\n');
+  let resultHtml = '';
+  let inList = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (!line) {
+      if (inList) {
+        resultHtml += '</ul>';
+        inList = false;
+      }
+      continue;
+    }
+
+    const headerMatch = line.match(/^(#{1,6})\s+(.*)/);
+    if (headerMatch) {
+      if (inList) {
+        resultHtml += '</ul>';
+        inList = false;
+      }
+      
+      const level = headerMatch[1].length;
+      const content = headerMatch[2].trim();
+      
+      let colorClass = 'text-cyber-blue border-cyber-blue/30';
+      let icon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 9.81h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14.19H4z"/></svg>`;
+      
+      if (content.toLowerCase().includes('weakness')) {
+        colorClass = 'text-cyber-red border-cyber-red/30';
+        icon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-alert"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>`;
+      } else if (content.toLowerCase().includes('strength')) {
+        colorClass = 'text-cyber-green border-cyber-green/30';
+        icon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>`;
+      } else if (content.toLowerCase().includes('overall')) {
+        colorClass = 'text-cyber-gold border-cyber-gold/30';
+        icon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-award"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/></svg>`;
+      }
+      
+      const tag = `h${level}`;
+      const textSize = level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg';
+      
+      resultHtml += `<${tag} class="${textSize} font-bold ${colorClass} flex items-center gap-2 mt-8 mb-4 pb-2 border-b bg-background/50 p-2 rounded-t-md">
+                ${icon} ${content}
+              </${tag}>`;
+      continue;
+    }
+
+    if (line.startsWith('* ') || line.startsWith('- ')) {
+      if (!inList) {
+        resultHtml += '<ul class="list-none pl-0 my-4 space-y-2">';
+        inList = true;
+      }
+      let itemContent = line.replace(/^[\*\-]\s+/, '');
+      itemContent = itemContent.replace(/\*\*(.*?)\*\*/g, '<strong class="text-foreground font-medium">$1</strong>');
+      resultHtml += `<li class="mb-3 text-muted-foreground flex items-start text-[15px]">
+                  <span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-muted/50 mt-0.5 mr-3 flex-shrink-0 text-cyber-blue shadow-[0_0_8px_rgba(0,240,255,0.3)]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  </span>
+                  <span class="leading-relaxed">${itemContent}</span>
+                </li>`;
+      continue;
+    }
+
+    // Normal paragraph
+    if (inList) {
+      resultHtml += '</ul>';
+      inList = false;
+    }
+    let pContent = line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-foreground font-medium">$1</strong>');
+    resultHtml += `<p class="text-muted-foreground mb-4 leading-relaxed text-[15px]">${pContent}</p>`;
+  }
+
+  if (inList) {
+    resultHtml += '</ul>';
+  }
+
+  return `<div class="space-y-2">${resultHtml}</div>`;
 };
 
 const Result = () => {
@@ -311,7 +389,7 @@ const Result = () => {
                   </div>
                 ) : (
                   <div
-                    className="prose dark:prose-invert"
+                    className="w-full"
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(result.overallAnalysisText) }}
                   />
                 )}
