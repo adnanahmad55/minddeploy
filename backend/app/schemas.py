@@ -68,6 +68,8 @@ class UserStats(BaseModel):
     debates_won: int
     debates_lost: int
     debates_competed: int
+    elo: int = 1000
+    mind_tokens: int = 0
 
 class Badge(BaseModel):
     id: int
@@ -137,6 +139,8 @@ class UserStats(BaseModel):
     debates_won: int
     debates_lost: int
     debates_competed: int
+    elo: int = 1000
+    mind_tokens: int = 0
 
     class Config:
         from_attributes = True

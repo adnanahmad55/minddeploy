@@ -112,7 +112,6 @@ async def send_message_to_human(sid, data):
                 message_to_broadcast['timestamp'] = message_to_broadcast['timestamp'].isoformat()
             print(f"DEBUG: Emitting 'new_message' to room {debate_id} with content: {message_to_broadcast.get('content')[:50]}...")
             await sio.emit('new_message', message_to_broadcast, room=str(debate_id))
-            await sio.emit('new_message', message_to_broadcast, room=str(debate_id))
             # --- END FIX ---
 
     except Exception as e:

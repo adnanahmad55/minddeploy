@@ -121,31 +121,42 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-bg">
       <header className="border-b border-border/50 bg-card/20 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Brain className="h-8 w-8 text-cyber-red" />
-            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              MindGrid
-            </h1>
+        <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div className="flex items-center space-x-3">
+              <Brain className="h-8 w-8 text-cyber-red" />
+              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                MindGrid
+              </h1>
+            </div>
+            <div className="flex md:hidden items-center space-x-2">
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Welcome,</p>
+                <p className="text-sm font-semibold text-foreground">{user?.username}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleLogout}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center flex-wrap justify-center gap-2">
             <Link to="/leaderboard">
-              <Button variant="ghost">Leaderboard</Button>
+              <Button variant="ghost" size="sm">Leaderboard</Button>
             </Link>
             <Link to="/store">
-              <Button variant="ghost">Store</Button>
+              <Button variant="ghost" size="sm">Store</Button>
             </Link>
             <Link to="/forums">
-              <Button variant="ghost">Forums</Button>
+              <Button variant="ghost" size="sm">Forums</Button>
             </Link>
             <Link to="/messages">
-              <Button variant="ghost">Messages</Button>
+              <Button variant="ghost" size="sm">Messages</Button>
             </Link>
-            <div className="text-right">
+            <div className="hidden md:block text-right ml-2">
               <p className="text-sm text-muted-foreground">Welcome back,</p>
               <p className="font-semibold text-foreground">{user?.username}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="hidden md:flex ml-2">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -183,7 +194,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">ELO Rating</p>
-                <p className="text-2xl font-bold text-foreground">{user?.elo}</p>
+                <p className="text-2xl font-bold text-foreground">{stats?.elo ?? user?.elo}</p>
               </div>
             </div>
           </Card>
@@ -195,7 +206,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Mind Tokens</p>
-                <p className="text-2xl font-bold text-foreground">{user?.mind_tokens}</p>
+                <p className="text-2xl font-bold text-foreground">{stats?.mind_tokens ?? user?.mind_tokens}</p>
               </div>
             </div>
           </Card>

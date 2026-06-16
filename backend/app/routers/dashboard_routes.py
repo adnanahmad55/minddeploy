@@ -41,7 +41,9 @@ def get_user_stats(db: Session = Depends(database.get_db), current_user: models.
     return {
         "debates_won": debates_won,
         "debates_lost": debates_lost,
-        "debates_competed": debates_competed
+        "debates_competed": debates_competed,
+        "elo": current_user.elo,
+        "mind_tokens": current_user.mind_tokens
     }
 
 # ----------------- GET USER HISTORY -----------------

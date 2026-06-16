@@ -87,12 +87,16 @@ const Debate = () => {
 
       socketRef.current.on('new_message', (message: any) => {
         console.log('Received new message:', message);
-        setMessages(prev => [...prev, {
-            ...message,
-            id: String(message.id),
-            sender_id: message.sender_id !== null ? Number(message.sender_id) : null,
-            timestamp: new Date(message.timestamp)
-        }]);
+        setMessages(prev => {
+            // Prevent duplicates if any
+            if (prev.find(m => String(m.id) === String(message.id))) return prev;
+            return [...prev, {
+                ...message,
+                id: String(message.id),
+                sender_id: message.sender_id !== null ? Number(message.sender_id) : null,
+                timestamp: new Date(message.timestamp)
+            }];
+        });
       });
 
       socketRef.current.on('ai_typing', (data) => {
@@ -228,7 +232,6 @@ const Debate = () => {
       debate_id: debateId,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, newMessage]);
     setCurrentMessage('');
 
     if (opponent.is_ai) {
@@ -253,18 +256,11 @@ const Debate = () => {
             description: `Failed to send message: ${response.status} ${errorText}`,
             variant: "destructive",
           });
-          setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
           return;
         }
         
         const aiMessage = await response.json();
-        setMessages(prev => [...prev, {
-            ...aiMessage,
-            id: String(aiMessage.id),
-            sender_id: aiMessage.sender_id !== null ? Number(aiMessage.sender_id) : null,
-            timestamp: new Date(aiMessage.timestamp),
-            sender_type: 'ai'
-        }]);
+        // Socket will handle adding the AI message and User message to state
       } catch (error) {
         console.error("Fetch error sending message to AI debate API:", error);
         toast({
@@ -272,7 +268,6 @@ const Debate = () => {
           description: "Failed to send message due to network error.",
           variant: "destructive",
         });
-        setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
       }
     } else {
       console.log("Sending message to human opponent via socket...");

@@ -601,8 +601,8 @@ const Messages = () => {
               </div>
             </ScrollArea>
 
-            <div className="p-4 bg-card/50 border-t border-border/30 relative">
-              <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
+            <div className="p-2 md:p-4 bg-card/50 border-t border-border/30 relative">
+              <form onSubmit={handleSendMessage} className="flex gap-1 sm:gap-2 items-center">
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -615,21 +615,22 @@ const Messages = () => {
                   accept="image/*,video/*"
                 />
                 
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading || isRecording}
-                  title="Attach file"
-                >
-                  <Paperclip className="w-4 h-4" />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading || isRecording}
+                    title="Attach file"
+                    className="h-8 w-8 sm:h-10 sm:w-10"
+                  >
+                    <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
 
                 <Popover open={isGifPopoverOpen} onOpenChange={setIsGifPopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" disabled={isUploading || isRecording} title="GIFs">
-                      <Sticker className="w-4 h-4" />
+                    <Button type="button" variant="ghost" size="icon" disabled={isUploading || isRecording} title="GIFs" className="h-8 w-8 sm:h-10 sm:w-10">
+                      <Sticker className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent side="top" align="start" className="w-72 p-2">
@@ -656,8 +657,8 @@ const Messages = () => {
 
                 <Popover open={isEmojiPopoverOpen} onOpenChange={setIsEmojiPopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" disabled={isUploading || isRecording} title="Emojis">
-                      <Smile className="w-4 h-4" />
+                    <Button type="button" variant="ghost" size="icon" disabled={isUploading || isRecording} title="Emojis" className="h-8 w-8 sm:h-10 sm:w-10">
+                      <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent side="top" align="start" className="w-auto p-0 border-none shadow-none bg-transparent">
@@ -673,24 +674,24 @@ const Messages = () => {
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={`Message ${activeTab === 'groups' ? 'group' : 'user'}... (or drag & drop)`}
-                  className="flex-1 bg-background"
+                  placeholder={`Message...`}
+                  className="flex-1 bg-background h-8 sm:h-10 text-sm"
                   disabled={isUploading || isRecording}
                 />
 
                 {isRecording ? (
-                  <Button type="button" variant="destructive" size="icon" onClick={stopRecording} className="animate-pulse">
-                    <Square className="w-4 h-4" />
+                  <Button type="button" variant="destructive" size="icon" onClick={stopRecording} className="animate-pulse h-8 w-8 sm:h-10 sm:w-10">
+                    <Square className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
                 ) : (
-                  <Button type="button" variant="ghost" size="icon" onClick={startRecording} disabled={isUploading || !!newMessage.trim()}>
-                    <Mic className="w-4 h-4" />
+                  <Button type="button" variant="ghost" size="icon" onClick={startRecording} disabled={isUploading || !!newMessage.trim()} className="h-8 w-8 sm:h-10 sm:w-10">
+                    <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
                 )}
 
                 {(!isRecording && (newMessage.trim() || isUploading)) && (
-                  <Button type="submit" size="icon" disabled={isUploading}>
-                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <Button type="submit" size="icon" disabled={isUploading} className="h-8 w-8 sm:h-10 sm:w-10">
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
                   </Button>
                 )}
               </form>
