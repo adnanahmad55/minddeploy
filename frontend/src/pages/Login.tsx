@@ -3,14 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Brain, Lock, User } from 'lucide-react';
+import { Brain, Lock, User, Mail, KeyRound } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Forgot Password States
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [fpStep, setFpStep] = useState<1|2>(1);
+  const [fpEmail, setFpEmail] = useState('');
+  const [fpOtp, setFpOtp] = useState('');
+  const [fpNewPassword, setFpNewPassword] = useState('');
+  const [fpIsLoading, setFpIsLoading] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -33,6 +43,58 @@ const Login = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSendResetOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fpEmail) return;
+    setFpIsLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: fpEmail, purpose: 'reset' })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "OTP Sent", description: "Check your email for the reset code." });
+        setFpStep(2);
+      } else {
+        toast({ title: "Error", description: data.detail || "Failed to send OTP", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Network error", variant: "destructive" });
+    } finally {
+      setFpIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fpOtp || !fpNewPassword) return;
+    setFpIsLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: fpEmail, otp_code: fpOtp, new_password: fpNewPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Success", description: "Password has been reset. You can now login." });
+        setIsForgotOpen(false);
+        setFpStep(1);
+        setFpEmail('');
+        setFpOtp('');
+        setFpNewPassword('');
+      } else {
+        toast({ title: "Error", description: data.detail || "Invalid OTP", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Network error", variant: "destructive" });
+    } finally {
+      setFpIsLoading(false);
     }
   };
 
@@ -91,7 +153,79 @@ const Login = () => {
             >
               {isLoading ? "Connecting..." : "Enter the Grid"}
             </Button>
+            <div className="flex justify-end">
+              <Button type="button" variant="link" onClick={() => setIsForgotOpen(true)} className="px-0 text-muted-foreground hover:text-cyber-red">
+                Forgot Password?
+              </Button>
+            </div>
           </form>
+
+          <Dialog open={isForgotOpen} onOpenChange={(open) => { setIsForgotOpen(open); if(!open) setFpStep(1); }}>
+            <DialogContent className="sm:max-w-md bg-gradient-card border-border/50">
+              <DialogHeader>
+                <DialogTitle>Reset Password</DialogTitle>
+              </DialogHeader>
+              {fpStep === 1 ? (
+                <form onSubmit={handleSendResetOTP} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        value={fpEmail}
+                        onChange={(e) => setFpEmail(e.target.value)}
+                        className="pl-10 bg-input/50"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={fpIsLoading}>
+                    {fpIsLoading ? "Sending..." : "Send OTP"}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">OTP Code</label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        value={fpOtp}
+                        onChange={(e) => setFpOtp(e.target.value)}
+                        className="pl-10 bg-input/50 tracking-widest text-lg font-bold"
+                        placeholder="6-digit code"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">New Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="password"
+                        value={fpNewPassword}
+                        onChange={(e) => setFpNewPassword(e.target.value)}
+                        className="pl-10 bg-input/50"
+                        placeholder="New password"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={fpIsLoading}>
+                    {fpIsLoading ? "Resetting..." : "Reset Password"}
+                  </Button>
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => setFpStep(1)}>
+                    Back
+                  </Button>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
 
           <div className="mt-6 text-center">
             <p className="text-muted-foreground">

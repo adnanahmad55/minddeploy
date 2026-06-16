@@ -15,6 +15,21 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    otp_code: str
+
+class SendOTPRequest(BaseModel):
+    email: EmailStr
+    purpose: str # 'signup' or 'reset'
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    purpose: str
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    new_password: str
 
 
 class UserOut(BaseModel):
