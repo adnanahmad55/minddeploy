@@ -437,7 +437,7 @@ const Messages = () => {
     
     if (isAudio) {
       return (
-        <audio controls className="w-full max-w-[240px] mt-1">
+        <audio controls className="w-[240px] mt-1">
           <source src={url} />
           Your browser does not support audio.
         </audio>

@@ -153,3 +153,13 @@ class DirectMessage(Base):
 
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
+
+class UserPurchase(Base):
+    __tablename__ = "user_purchases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    item_id = Column(String, index=True, nullable=False)
+    purchased_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")

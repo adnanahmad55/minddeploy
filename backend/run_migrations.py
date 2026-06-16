@@ -8,10 +8,10 @@ def run_migrations(autogenerate=False):
     backend_dir = os.path.dirname(os.path.abspath(__file__))
     alembic_cfg = Config(os.path.join(backend_dir, "alembic.ini"))
     if autogenerate:
-        command.revision(alembic_cfg, autogenerate=True, message="Add badges and streaks tables")
+        command.revision(alembic_cfg, autogenerate=True, message="Add user purchases")
     else:
         command.upgrade(alembic_cfg, "head")
     print("Migrations complete.")
 
 if __name__ == "__main__":
-    run_migrations(autogenerate=True)
+    run_migrations(autogenerate=False)

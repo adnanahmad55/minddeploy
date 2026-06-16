@@ -54,7 +54,25 @@ const Store = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
-  const [ownedItems, setOwnedItems] = useState<string[]>([]); // In reality, fetch from backend
+  const [ownedItems, setOwnedItems] = useState<string[]>([]);
+  
+  React.useEffect(() => {
+    if (!user) return;
+    const fetchPurchases = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/store/purchases`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOwnedItems(data.purchases || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch purchases:", err);
+      }
+    };
+    fetchPurchases();
+  }, [user]);
 
   const handlePurchase = async (item: StoreItem) => {
     if (!user) return;

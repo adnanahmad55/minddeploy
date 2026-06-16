@@ -23,6 +23,15 @@ router = APIRouter(
 # Groups
 @router.post("/groups", response_model=schemas.ChatGroupOut)
 def create_group(group: schemas.ChatGroupCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    # Check if user owns premium_guild
+    has_guild_ticket = db.query(models.UserPurchase).filter(
+        models.UserPurchase.user_id == current_user.id,
+        models.UserPurchase.item_id == "premium_guild"
+    ).first()
+    
+    if not has_guild_ticket:
+        raise HTTPException(status_code=403, detail="You must purchase a Guild Creation Ticket from the MindStore to create a group.")
+
     new_group = models.ChatGroup(
         name=group.name,
         description=group.description,
