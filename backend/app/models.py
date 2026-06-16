@@ -118,6 +118,7 @@ class GroupMember(Base):
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("chat_groups.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role = Column(String, default="member")
     joined_at = Column(DateTime, default=datetime.utcnow)
 
     group = relationship("ChatGroup", back_populates="members")

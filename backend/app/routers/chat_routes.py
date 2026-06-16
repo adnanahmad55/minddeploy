@@ -32,8 +32,8 @@ def create_group(group: schemas.ChatGroupCreate, db: Session = Depends(database.
     db.commit()
     db.refresh(new_group)
     
-    # Add creator as member
-    member = models.GroupMember(group_id=new_group.id, user_id=current_user.id)
+    # Add creator as member and admin
+    member = models.GroupMember(group_id=new_group.id, user_id=current_user.id, role='admin')
     db.add(member)
     db.commit()
     
@@ -83,11 +83,10 @@ def add_user_to_group(group_id: int, username: str, db: Session = Depends(databa
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
         
-    # Optional: check if current_user is the owner or just a member
-    # For now, anyone in the group can add others
+    # Only admins can add others
     is_member = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == current_user.id).first()
-    if not is_member:
-        raise HTTPException(status_code=403, detail="You must be a member to add others")
+    if not is_member or is_member.role != 'admin':
+        raise HTTPException(status_code=403, detail="You must be an admin to add others")
         
     user_to_add = db.query(models.User).filter(models.User.username == username).first()
     if not user_to_add:
@@ -101,6 +100,43 @@ def add_user_to_group(group_id: int, username: str, db: Session = Depends(databa
     db.add(member)
     db.commit()
     return {"message": f"{username} added successfully"}
+
+@router.get("/groups/{group_id}/members", response_model=List[schemas.GroupMemberOut])
+def get_group_members(group_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    is_member = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == current_user.id).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+    
+    members = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id).all()
+    return members
+
+@router.delete("/groups/{group_id}/remove_user/{user_id}")
+def remove_user_from_group(group_id: int, user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    is_admin = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == current_user.id, models.GroupMember.role == 'admin').first()
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="You must be an admin to remove users")
+        
+    member_to_remove = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == user_id).first()
+    if not member_to_remove:
+        raise HTTPException(status_code=404, detail="User not in group")
+        
+    db.delete(member_to_remove)
+    db.commit()
+    return {"message": "User removed successfully"}
+
+@router.post("/groups/{group_id}/promote_user/{user_id}")
+def promote_user_to_admin(group_id: int, user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    is_admin = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == current_user.id, models.GroupMember.role == 'admin').first()
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="You must be an admin to promote users")
+        
+    member_to_promote = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == user_id).first()
+    if not member_to_promote:
+        raise HTTPException(status_code=404, detail="User not in group")
+        
+    member_to_promote.role = 'admin'
+    db.commit()
+    return {"message": "User promoted to admin"}
 
 @router.post("/upload")
 def upload_chat_media(file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user)):

@@ -154,17 +154,20 @@ async def end_debate(sid, data):
                 losing_player = player1 if winner_id != player1.id else player2
                 elo_change = evaluation_result.get('elo_change', 10)
                 winning_player.elo += elo_change
-                winning_player.mind_tokens += 5
+                winning_player.mind_tokens += 50
                 losing_player.elo -= elo_change
+                losing_player.mind_tokens += 10
                 db_debate.winner = winning_player.username
             elif result == 'AI':
-                winning_player_id = 0
-                losing_player = player1 if player1.id != 0 else player2
+                real_user = player2 if player1.id == 1 else player1
                 elo_change = evaluation_result.get('elo_change', 10)
-                losing_player.elo -= elo_change
+                real_user.elo -= elo_change
+                real_user.mind_tokens += 10
                 db_debate.winner = "AI Bot"
             elif result == 'Draw':
                 db_debate.winner = "Draw"
+                player1.mind_tokens += 25
+                player2.mind_tokens += 25
             else:
                 db_debate.winner = "Undetermined"
             

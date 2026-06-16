@@ -186,11 +186,15 @@ class GroupMemberOut(BaseModel):
     id: int
     group_id: int
     user_id: int
+    role: str
     joined_at: datetime
     user: UserOut
 
     class Config:
         from_attributes = True
+
+class RoleUpdate(BaseModel):
+    role: str
 
 class GroupMessageCreate(BaseModel):
     content: str
