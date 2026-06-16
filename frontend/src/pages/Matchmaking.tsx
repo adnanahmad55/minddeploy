@@ -43,13 +43,14 @@ const Matchmaking = () => {
     });
 
     socket.on('challenge_received', ({ challenger, topic }) => {
-      toast({
+      const { dismiss } = toast({
         title: `Debate Challenge from ${challenger.username}`,
         description: `Topic: ${topic}. Do you accept?`,
+        duration: 30000,
         action: (
           <>
-            <Button onClick={() => acceptChallenge(challenger, topic)}>Accept</Button>
-            <Button variant="ghost" onClick={() => declineChallenge(challenger)}>Decline</Button>
+            <Button onClick={() => { dismiss(); acceptChallenge(challenger, topic); }}>Accept</Button>
+            <Button variant="ghost" onClick={() => { dismiss(); declineChallenge(challenger); }}>Decline</Button>
           </>
         ),
       });

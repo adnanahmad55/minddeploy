@@ -65,11 +65,21 @@ const ChatRoom = () => {
 
   useEffect(() => {
     messagesRef.current = messages;
-    const interval = setInterval(() => {
-      connectAndFetchData();
-    }, 50); // Retry every 30 seconds
-    return () => clearInterval(interval);
   }, [messages]);
+
+  useEffect(() => {
+    if (!socketRef.current) {
+      connectAndFetchData();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [debateId]);
   useEffect(() => {
     userRef.current = user;
   }, [user]);

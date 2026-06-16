@@ -65,6 +65,48 @@ const Messages = () => {
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
   
+  // Members Modal
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const fetchGroupMembers = async () => {
+    if (!activeChatId || activeTab !== 'groups') return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/members`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGroupMembers(data);
+        const myMember = data.find((m: any) => m.user.id === parseInt(user?.id || '0'));
+        setIsAdmin(myMember?.role === 'admin');
+      }
+    } catch (err) {
+      console.error("Error fetching members", err);
+    }
+  };
+
+  const removeMember = async (userId: number) => {
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/remove_user/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchGroupMembers();
+    } catch (err) { console.error(err); }
+  };
+
+  const promoteMember = async (userId: number) => {
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/promote_user/${userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchGroupMembers();
+    } catch (err) { console.error(err); }
+  };
+  
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +116,7 @@ const Messages = () => {
     // Fetch initial groups and DM users
     const fetchSidebarData = async () => {
       try {
-        const groupsRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/all`, {
+        const groupsRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (groupsRes.ok) setGroups(await groupsRes.json());
@@ -282,7 +324,11 @@ const Messages = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        handleSendMessage(undefined, data.media_url);
+        let finalUrl = data.media_url;
+        if (file.type.startsWith('audio/')) {
+          finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'type=audio';
+        }
+        handleSendMessage(undefined, finalUrl);
       } else {
         const errData = await res.json();
         toast({ title: 'Upload Failed', description: errData.detail || 'Could not upload file.', variant: 'destructive' });
@@ -385,19 +431,21 @@ const Messages = () => {
   };
 
   const renderMedia = (url: string) => {
-    const isAudio = url.match(/\.(mp3|wav|ogg|webm)$/i) || (url.includes('/video/upload/') && url.endsWith('.webm'));
+    const cleanUrl = url.split('?')[0];
+    const isAudio = cleanUrl.match(/\.(mp3|wav|ogg|webm|m4a|aac)$/i) || url.includes('type=audio');
+    const isVideo = cleanUrl.match(/\.(mp4|mov|avi|mkv)$/i) && !isAudio;
+    
     if (isAudio) {
       return (
-        <audio controls className="w-full mt-2 h-10 max-w-[240px]">
+        <audio controls className="w-full h-10 max-w-[240px] rounded-full">
           <source src={url} />
           Your browser does not support audio.
         </audio>
       );
     }
-    const isVideo = url.match(/\.(mp4)$/i) || (url.includes('/video/upload/') && url.endsWith('.mp4'));
     if (isVideo) {
       return (
-        <video controls className="max-w-full rounded-md mt-2 max-h-64">
+        <video controls className="max-w-full rounded-lg max-h-64 object-cover">
           <source src={url} />
           Your browser does not support the video tag.
         </video>
@@ -406,10 +454,10 @@ const Messages = () => {
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <img src={url} alt="media" className="max-w-full rounded-md mt-2 max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity" />
+          <img src={url} alt="media" className="w-64 h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity shadow-sm" />
         </DialogTrigger>
         <DialogContent className="max-w-4xl w-full p-1 bg-transparent border-none flex justify-center">
-          <img src={url} alt="media fullscreen" className="max-w-full max-h-[80vh] object-contain rounded-md" />
+          <img src={url} alt="media fullscreen" className="max-w-full max-h-[80vh] object-contain rounded-lg" />
         </DialogContent>
       </Dialog>
     );
@@ -526,9 +574,44 @@ const Messages = () => {
                   )}
                 </div>
                 {activeTab === 'groups' && (
-                  <Button variant="ghost" size="sm" onClick={addUserToGroup} className="h-8">
-                    <UserPlus className="w-4 h-4 mr-2" /> Add User
-                  </Button>
+                  <div className="flex gap-2">
+                    {isAdmin && (
+                      <Button variant="ghost" size="sm" onClick={addUserToGroup} className="h-8">
+                        <UserPlus className="w-4 h-4 mr-2" /> Add User
+                      </Button>
+                    )}
+                    <Dialog open={isMembersModalOpen} onOpenChange={(open) => { setIsMembersModalOpen(open); if(open) fetchGroupMembers(); }}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 border-border/50">
+                          <Users className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Members</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <h2 className="text-lg font-bold mb-4">Group Members</h2>
+                        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                          {groupMembers.map((member) => (
+                            <div key={member.id} className="flex items-center justify-between p-2 rounded bg-secondary/50">
+                              <div>
+                                <span className="font-medium">{member.user.username}</span>
+                                {member.role === 'admin' && <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Admin</span>}
+                              </div>
+                              {isAdmin && member.user.id !== parseInt(user?.id || '0') && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="w-4 h-4"/></Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {member.role !== 'admin' && <DropdownMenuItem onClick={() => promoteMember(member.user.id)}>Make Admin</DropdownMenuItem>}
+                                    <DropdownMenuItem onClick={() => removeMember(member.user.id)} className="text-red-500">Remove</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 )}
               </CardTitle>
             </CardHeader>
@@ -567,23 +650,33 @@ const Messages = () => {
                           </DropdownMenu>
                         )}
 
-                        <div className={`px-4 py-2 rounded-2xl max-w-[80%] ${isMine ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-secondary text-secondary-foreground rounded-tl-sm'}`}>
+                        <div className={`flex flex-col gap-1 max-w-[80%] ${isMine ? 'items-end' : 'items-start'}`}>
                           {isEditing ? (
-                            <div className="flex gap-2">
-                              <Input 
-                                value={editContent} 
-                                onChange={e => setEditContent(e.target.value)} 
-                                className="h-7 text-sm text-foreground bg-background"
-                                autoFocus
-                                onKeyDown={e => e.key === 'Enter' && submitEdit(msg.id)}
-                              />
-                              <Button size="sm" onClick={() => submitEdit(msg.id)} className="h-7 px-2">Save</Button>
-                              <Button size="sm" variant="ghost" onClick={() => setEditingMessageId(null)} className="h-7 px-2 text-primary-foreground hover:bg-primary/80 hover:text-white">Cancel</Button>
+                            <div className={`px-4 py-2 rounded-2xl ${isMine ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-secondary text-secondary-foreground rounded-tl-sm'}`}>
+                              <div className="flex gap-2">
+                                <Input 
+                                  value={editContent} 
+                                  onChange={e => setEditContent(e.target.value)} 
+                                  className="h-7 text-sm text-foreground bg-background"
+                                  autoFocus
+                                  onKeyDown={e => e.key === 'Enter' && submitEdit(msg.id)}
+                                />
+                                <Button size="sm" onClick={() => submitEdit(msg.id)} className="h-7 px-2">Save</Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditingMessageId(null)} className="h-7 px-2 text-primary-foreground hover:bg-primary/80 hover:text-white">Cancel</Button>
+                              </div>
                             </div>
                           ) : (
                             <>
-                              {msg.content && <p>{msg.content}</p>}
-                              {msg.media_url && renderMedia(msg.media_url)}
+                              {msg.content && (
+                                <div className={`px-4 py-2 rounded-2xl ${isMine ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-secondary text-secondary-foreground rounded-tl-sm'}`}>
+                                  <p>{msg.content}</p>
+                                </div>
+                              )}
+                              {msg.media_url && (
+                                <div className="mt-1">
+                                  {renderMedia(msg.media_url)}
+                                </div>
+                              )}
                             </>
                           )}
                         </div>
