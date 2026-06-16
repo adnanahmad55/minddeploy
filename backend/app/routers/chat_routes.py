@@ -45,8 +45,26 @@ def create_group(group: schemas.ChatGroupCreate, db: Session = Depends(database.
     member = models.GroupMember(group_id=new_group.id, user_id=current_user.id, role='admin')
     db.add(member)
     db.commit()
-    
     return new_group
+
+@router.delete("/groups/{group_id}")
+def delete_group(group_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    is_admin = db.query(models.GroupMember).filter(
+        models.GroupMember.group_id == group_id, 
+        models.GroupMember.user_id == current_user.id, 
+        models.GroupMember.role == 'admin'
+    ).first()
+    
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="You must be an admin to delete this guild.")
+        
+    group_to_delete = db.query(models.ChatGroup).filter(models.ChatGroup.id == group_id).first()
+    if not group_to_delete:
+        raise HTTPException(status_code=404, detail="Guild not found")
+        
+    db.delete(group_to_delete)
+    db.commit()
+    return {"message": "Guild deleted successfully"}
 
 @router.get("/groups", response_model=List[schemas.ChatGroupOut])
 def get_user_groups(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):

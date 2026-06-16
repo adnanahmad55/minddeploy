@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Users, Hash, Send, ArrowLeft, UserPlus, Paperclip, Loader2, Mic, Square, Smile, SmilePlus, MoreVertical, Edit2, Trash2, Sticker } from 'lucide-react';
+import { MessageSquare, Users, Hash, Send, ArrowLeft, UserPlus, Paperclip, Loader2, Mic, Square, Smile, SmilePlus, MoreVertical, Edit2, Trash2, Sticker, Phone, Video, PhoneOff } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import CallOverlay from '@/components/ui/CallOverlay';
 
 interface Group {
   id: number;
@@ -58,6 +59,16 @@ const Messages = () => {
   const [gifs, setGifs] = useState<string[]>([]);
   const [isGifPopoverOpen, setIsGifPopoverOpen] = useState(false);
   
+  // WebRTC
+  const [incomingCall, setIncomingCall] = useState<{ callerId: number, callerUsername: string, offer: any, callType: 'audio'|'video' } | null>(null);
+  const [callState, setCallState] = useState<'idle' | 'calling' | 'active'>('idle');
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [peerUsername, setPeerUsername] = useState('');
+  const [callType, setCallType] = useState<'audio'|'video'>('audio');
+  const peerConnection = useRef<RTCPeerConnection | null>(null);
+  const ringtone = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3'));
+  
   // Emoji
   const [isEmojiPopoverOpen, setIsEmojiPopoverOpen] = useState(false);
 
@@ -68,6 +79,8 @@ const Messages = () => {
   // Members Modal
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchGroupMembers = async () => {
@@ -201,6 +214,40 @@ const Messages = () => {
 
     socketRef.current.on('message_deleted', (data: any) => {
       setMessages(prev => prev.filter(m => m.id !== data.messageId));
+    });
+
+    socketRef.current.on('webrtc_offer', async (data: any) => {
+      if (callState !== 'idle') {
+        // Automatically reject if already in a call
+        socketRef.current?.emit('webrtc_reject_call', { targetUserId: data.callerId });
+        return;
+      }
+      setIncomingCall(data);
+      ringtone.current.loop = true;
+      ringtone.current.play().catch(e => console.log(e));
+    });
+
+    socketRef.current.on('webrtc_answer', async (data: any) => {
+      if (peerConnection.current) {
+        await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+        setCallState('active');
+      }
+    });
+
+    socketRef.current.on('webrtc_ice_candidate', async (data: any) => {
+      if (peerConnection.current && data.candidate) {
+        await peerConnection.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+    });
+
+    socketRef.current.on('webrtc_reject_call', () => {
+      toast({ title: 'Call Rejected', description: 'The user declined your call.', variant: 'destructive' });
+      endCall(true);
+    });
+
+    socketRef.current.on('webrtc_end_call', () => {
+      toast({ title: 'Call Ended', description: 'The remote user ended the call.' });
+      endCall(true);
     });
 
     return () => {
@@ -396,15 +443,161 @@ const Messages = () => {
       if (res.ok) {
         const newGroup = await res.json();
         setGroups([newGroup, ...groups]);
+      } else {
+        const errData = await res.json();
+        toast({ title: 'Creation Failed', description: errData.detail || 'Could not create group', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Network Error', description: 'Failed to connect to the server.', variant: 'destructive' });
+    }
+  };
+
+  const createPeerConnection = (targetUserId: number) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socketRef.current?.emit('webrtc_ice_candidate', { targetUserId, candidate: event.candidate });
+      }
+    };
+
+    pc.ontrack = (event) => {
+      setRemoteStream(event.streams[0]);
+    };
+
+    return pc;
+  };
+
+  const startCall = async (type: 'audio'|'video') => {
+    if (!activeChatId) return;
+    setCallType(type);
+    setCallState('calling');
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
+      setLocalStream(stream);
+      
+      const targetUser = dmUsers.find(u => u.id === activeChatId);
+      if (targetUser) setPeerUsername(targetUser.username);
+
+      const pc = createPeerConnection(activeChatId);
+      peerConnection.current = pc;
+      
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      socketRef.current?.emit('webrtc_offer', {
+        targetUserId: activeChatId,
+        callerId: user?.id,
+        callerUsername: user?.username,
+        offer,
+        callType: type
+      });
+    } catch (err) {
+      console.error("Media error:", err);
+      toast({ title: 'Error', description: 'Could not access camera/microphone.', variant: 'destructive' });
+      setCallState('idle');
+    }
+  };
+
+  const acceptCall = async () => {
+    if (!incomingCall) return;
+    ringtone.current.pause();
+    ringtone.current.currentTime = 0;
+    
+    setCallType(incomingCall.callType);
+    setPeerUsername(incomingCall.callerUsername);
+    setCallState('active');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: incomingCall.callType === 'video', audio: true });
+      setLocalStream(stream);
+
+      const pc = createPeerConnection(incomingCall.callerId);
+      peerConnection.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socketRef.current?.emit('webrtc_answer', {
+        targetUserId: incomingCall.callerId,
+        answer
+      });
+      setIncomingCall(null);
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Error', description: 'Could not access media devices.', variant: 'destructive' });
+      rejectCall();
+    }
+  };
+
+  const rejectCall = () => {
+    if (incomingCall) {
+      socketRef.current?.emit('webrtc_reject_call', { targetUserId: incomingCall.callerId });
+      setIncomingCall(null);
+      ringtone.current.pause();
+      ringtone.current.currentTime = 0;
+    }
+  };
+
+  const endCall = (remoteEnded = false) => {
+    if (localStream) {
+      localStream.getTracks().forEach(t => t.stop());
+      setLocalStream(null);
+    }
+    if (peerConnection.current) {
+      peerConnection.current.close();
+      peerConnection.current = null;
+    }
+    
+    if (!remoteEnded && (callState === 'active' || callState === 'calling')) {
+      const targetId = incomingCall ? incomingCall.callerId : activeChatId;
+      if (targetId) {
+        socketRef.current?.emit('webrtc_end_call', { targetUserId: targetId });
+      }
+    }
+    
+    setCallState('idle');
+    setRemoteStream(null);
+    setIncomingCall(null);
+    ringtone.current.pause();
+    ringtone.current.currentTime = 0;
+  };
+
+  const deleteGroup = async () => {
+    if (!activeChatId) return;
+    if (!confirm("Are you sure you want to completely delete this guild? This action cannot be undone.")) return;
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Guild deleted.' });
+        setGroups(groups.filter(g => g.id !== activeChatId));
+        setActiveChatId(null);
+      } else {
+        const errData = await res.json();
+        toast({ title: 'Error', description: errData.detail || 'Failed to delete guild.', variant: 'destructive' });
       }
     } catch (err) {
       console.error(err);
     }
   };
   
-  const addUserToGroup = async () => {
+  const addUserToGroup = async (username: string) => {
     if (!activeChatId) return;
-    const username = prompt("Enter the exact username to add to this group:");
     if (!username) return;
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat/groups/${activeChatId}/add_user?username=${encodeURIComponent(username)}`, {
@@ -576,9 +769,50 @@ const Messages = () => {
                 {activeTab === 'groups' && (
                   <div className="flex gap-2">
                     {isAdmin && (
-                      <Button variant="ghost" size="sm" onClick={addUserToGroup} className="h-8">
-                        <UserPlus className="w-4 h-4 mr-2" /> Add User
-                      </Button>
+                      <>
+                        <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8">
+                              <UserPlus className="w-4 h-4 mr-2" /> Add User
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[425px]">
+                            <h2 className="text-lg font-bold mb-4">Add User to Guild</h2>
+                            <Input 
+                              placeholder="Search users..." 
+                              value={userSearchQuery} 
+                              onChange={(e) => setUserSearchQuery(e.target.value)} 
+                              className="mb-4"
+                            />
+                            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
+                              {dmUsers
+                                .filter(u => u.username.toLowerCase().includes(userSearchQuery.toLowerCase()))
+                                .map(u => (
+                                  <div key={u.id} className="flex items-center justify-between p-2 rounded bg-secondary/30 hover:bg-secondary/60 transition-colors">
+                                    <div className="flex items-center">
+                                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-3 font-medium text-primary">
+                                        {u.username[0].toUpperCase()}
+                                      </div>
+                                      <span className="font-medium">{u.username}</span>
+                                    </div>
+                                    <Button size="sm" onClick={() => {
+                                      addUserToGroup(u.username);
+                                      setIsAddUserModalOpen(false);
+                                    }}>
+                                      Add
+                                    </Button>
+                                  </div>
+                                ))}
+                              {dmUsers.filter(u => u.username.toLowerCase().includes(userSearchQuery.toLowerCase())).length === 0 && (
+                                <p className="text-center text-muted-foreground text-sm py-4">No users found.</p>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        <Button variant="destructive" size="sm" onClick={deleteGroup} className="h-8">
+                          <Trash2 className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Delete Guild</span>
+                        </Button>
+                      </>
                     )}
                     <Dialog open={isMembersModalOpen} onOpenChange={(open) => { setIsMembersModalOpen(open); if(open) fetchGroupMembers(); }}>
                       <DialogTrigger asChild>
@@ -611,6 +845,16 @@ const Messages = () => {
                         </div>
                       </DialogContent>
                     </Dialog>
+                  </div>
+                )}
+                {activeTab === 'dms' && (
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="h-8 w-8 text-primary">
+                      <Phone className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => startCall('video')} className="h-8 w-8 text-primary">
+                      <Video className="w-5 h-5" />
+                    </Button>
                   </div>
                 )}
               </CardTitle>
@@ -801,6 +1045,39 @@ const Messages = () => {
         )}
       </div>
       </div>
+
+      {/* WebRTC Call UI */}
+      {callState === 'active' && (
+        <CallOverlay
+          localStream={localStream}
+          remoteStream={remoteStream}
+          peerUsername={peerUsername}
+          callType={callType}
+          onEndCall={() => endCall(false)}
+        />
+      )}
+
+      <Dialog open={!!incomingCall && callState === 'idle'} onOpenChange={(open) => { if(!open) rejectCall(); }}>
+        <DialogContent className="sm:max-w-md text-center">
+          <div className="flex flex-col items-center justify-center p-6 space-y-6">
+            <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center animate-pulse">
+              {incomingCall?.callType === 'video' ? <Video className="w-12 h-12 text-primary" /> : <Phone className="w-12 h-12 text-primary" />}
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">{incomingCall?.callerUsername}</h2>
+              <p className="text-muted-foreground mt-1">Incoming {incomingCall?.callType} call...</p>
+            </div>
+            <div className="flex gap-6 mt-4 w-full justify-center">
+              <Button variant="destructive" size="lg" className="rounded-full w-16 h-16" onClick={rejectCall}>
+                <PhoneOff className="w-6 h-6" />
+              </Button>
+              <Button variant="default" size="lg" className="rounded-full w-16 h-16 bg-green-500 hover:bg-green-600 text-white" onClick={acceptCall}>
+                {incomingCall?.callType === 'video' ? <Video className="w-6 h-6" /> : <Phone className="w-6 h-6" />}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

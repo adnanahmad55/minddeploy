@@ -320,4 +320,45 @@ async def delete_message(sid, data):
                     await sio.emit('message_deleted', {'messageId': message_id, 'type': 'direct', 'senderId': s_id, 'receiverId': r_id}, room=f"user_{s_id}")
                     await sio.emit('message_deleted', {'messageId': message_id, 'type': 'direct', 'senderId': s_id, 'receiverId': r_id}, room=f"user_{r_id}")
     except Exception as e:
-        print(f"Error deleting message: {e}")
+        print(f"Error in delete_message: {e}")
+
+# --- WebRTC Signaling ---
+@sio.event
+async def webrtc_offer(sid, data):
+    target_user_id = data.get('targetUserId')
+    caller_id = data.get('callerId')
+    caller_username = data.get('callerUsername')
+    offer = data.get('offer')
+    call_type = data.get('callType', 'video') # 'video' or 'audio'
+    await sio.emit('webrtc_offer', {
+        'callerId': caller_id,
+        'callerUsername': caller_username,
+        'offer': offer,
+        'callType': call_type
+    }, room=f"user_{target_user_id}")
+
+@sio.event
+async def webrtc_answer(sid, data):
+    target_user_id = data.get('targetUserId')
+    answer = data.get('answer')
+    await sio.emit('webrtc_answer', {
+        'answer': answer
+    }, room=f"user_{target_user_id}")
+
+@sio.event
+async def webrtc_ice_candidate(sid, data):
+    target_user_id = data.get('targetUserId')
+    candidate = data.get('candidate')
+    await sio.emit('webrtc_ice_candidate', {
+        'candidate': candidate
+    }, room=f"user_{target_user_id}")
+
+@sio.event
+async def webrtc_end_call(sid, data):
+    target_user_id = data.get('targetUserId')
+    await sio.emit('webrtc_end_call', {}, room=f"user_{target_user_id}")
+
+@sio.event
+async def webrtc_reject_call(sid, data):
+    target_user_id = data.get('targetUserId')
+    await sio.emit('webrtc_reject_call', {}, room=f"user_{target_user_id}")
