@@ -285,7 +285,7 @@ const Dashboard = () => {
               {debates.length > 0 ? (
                 debates.map((debate) => {
                   const isWin = debate.winner === user?.username;
-                  const isDraw = debate.winner.toLowerCase() === 'draw';
+                  const isDraw = debate.winner?.toLowerCase() === 'draw';
                   const statusColor = isWin ? 'bg-cyber-green' : isDraw ? 'bg-cyber-gold' : 'bg-cyber-red';
                   const statusTextClass = isWin ? 'text-cyber-green' : isDraw ? 'text-cyber-gold' : 'text-cyber-red';
                   
