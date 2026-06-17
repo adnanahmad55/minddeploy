@@ -17,7 +17,7 @@ def send_otp_email(recipient_email: str, otp_code: str, purpose: str):
         print(f"To: {recipient_email}")
         print(f"OTP: {otp_code} for {purpose}")
         print(f"------------------")
-        return True
+        return True, "Mock email sent"
 
     try:
         msg = MIMEMultipart()
@@ -35,12 +35,12 @@ def send_otp_email(recipient_email: str, otp_code: str, purpose: str):
 
         msg.attach(MIMEText(body, 'plain'))
 
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
-        server.starttls()
+        # Using SMTP_SSL on port 465 is often more reliable on cloud servers like Render
+        server = smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=10)
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
         server.send_message(msg)
         server.quit()
-        return True
+        return True, "Success"
     except Exception as e:
         print(f"Error sending email: {e}")
-        return False
+        return False, str(e)

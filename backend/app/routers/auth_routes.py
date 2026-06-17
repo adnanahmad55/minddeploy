@@ -42,9 +42,9 @@ def send_otp(req: schemas.SendOTPRequest, db: Session = Depends(database.get_db)
     db.add(otp_entry)
     db.commit()
 
-    success = send_otp_email(req.email, otp_code, req.purpose)
+    success, error_msg = send_otp_email(req.email, otp_code, req.purpose)
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to send OTP email")
+        raise HTTPException(status_code=500, detail=f"Failed to send OTP email: {error_msg}")
 
     return {"message": "OTP sent successfully"}
 
