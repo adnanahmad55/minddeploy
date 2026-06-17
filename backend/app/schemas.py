@@ -15,7 +15,8 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
-    otp_code: str
+    security_question: str
+    security_answer: str
 
 class SendOTPRequest(BaseModel):
     email: EmailStr
@@ -28,7 +29,7 @@ class VerifyOTPRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
-    otp_code: str
+    security_answer: str
     new_password: str
 
 

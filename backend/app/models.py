@@ -22,6 +22,8 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    security_question = Column(String, nullable=True)
+    security_answer = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     elo = Column(Integer, default=1000)
     mind_tokens = Column(Integer, default=0)

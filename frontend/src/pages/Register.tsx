@@ -5,60 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Brain, Lock, Mail, User, KeyRound } from 'lucide-react';
+import { Brain, Lock, Mail, User, KeyRound, HelpCircle } from 'lucide-react';
 
 const Register = () => {
-  const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
+  const [securityQuestion, setSecurityQuestion] = useState('');
+  const [securityAnswer, setSecurityAnswer] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      toast({ title: "Error", description: "Please enter an email address.", variant: "destructive" });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, purpose: 'signup' })
-      });
-      
-      const data = await res.json();
-      if (res.ok) {
-        setOtpSent(true);
-        toast({ title: "OTP Sent", description: "Check your email for the verification code." });
-      } else {
-        toast({ title: "Error", description: data.detail || "Failed to send OTP", variant: "destructive" });
-      }
-    } catch (err) {
-      console.error(err);
-      toast({ title: "Error", description: "Network error", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode) {
-      toast({ title: "Error", description: "Please enter the OTP.", variant: "destructive" });
-      return;
-    }
-    setStep(2);
-  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,12 +29,16 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      // The register function in AuthContext needs to be updated to pass otp_code.
-      // We will override it here for simplicity.
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, otp_code: otpCode })
+        body: JSON.stringify({ 
+          username, 
+          email, 
+          password,
+          security_question: securityQuestion,
+          security_answer: securityAnswer
+        })
       });
       const data = await res.json();
       
@@ -82,10 +46,7 @@ const Register = () => {
         toast({ title: "Registration successful", description: "Welcome to MindGrid!" });
         navigate('/login');
       } else {
-        toast({ title: "Registration failed", description: data.detail || "Invalid OTP or credentials.", variant: "destructive" });
-        if (data.detail && data.detail.toLowerCase().includes('otp')) {
-          setStep(1); // Go back if OTP was invalid
-        }
+        toast({ title: "Registration failed", description: data.detail || "Invalid credentials.", variant: "destructive" });
       }
     } catch (error) {
       console.error("Registration failed:", error);
@@ -111,109 +72,101 @@ const Register = () => {
         </div>
 
         <Card className="bg-gradient-card border-border/50 p-8 shadow-cyber">
-          {step === 1 ? (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
-                    placeholder="Enter your email"
-                    disabled={otpSent || isLoading}
-                    required
-                  />
-                </div>
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
+                  placeholder="Enter your email"
+                  required
+                />
               </div>
-              
-              {!otpSent ? (
-                <Button onClick={handleSendOTP} size="lg" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Sending..." : "Send OTP"}
-                </Button>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Verification Code</label>
-                    <div className="relative">
-                      <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="text"
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value)}
-                        className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red tracking-widest text-lg font-bold"
-                        placeholder="Enter 6-digit OTP"
-                        maxLength={6}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={handleVerifyOTP} size="lg" className="w-full">
-                    Verify & Continue
-                  </Button>
-                  <Button variant="ghost" onClick={() => setOtpSent(false)} className="w-full text-sm">
-                    Change Email
-                  </Button>
-                </>
-              )}
             </div>
-          ) : (
-            <form onSubmit={handleRegister} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Username</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
-                    placeholder="Choose your handle"
-                    required
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
-                    placeholder="Create a password"
-                    required
-                  />
-                </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Username</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
+                  placeholder="Choose your handle"
+                  required
+                />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
-                    placeholder="Confirm your password"
-                    required
-                  />
-                </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
+                  placeholder="Create a password"
+                  required
+                />
               </div>
+            </div>
 
-              <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Create Account"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setStep(1)} className="w-full text-sm">
-                Back to Email
-              </Button>
-            </form>
-          )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
+                  placeholder="Confirm your password"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-border/50">
+              <label className="text-sm font-medium text-foreground">Security Question (For Password Reset)</label>
+              <div className="relative">
+                <HelpCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={securityQuestion}
+                  onChange={(e) => setSecurityQuestion(e.target.value)}
+                  className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
+                  placeholder="e.g., What is your favorite movie?"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Security Answer</label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={securityAnswer}
+                  onChange={(e) => setSecurityAnswer(e.target.value)}
+                  className="pl-10 bg-input/50 border-border/50 focus:border-cyber-red"
+                  placeholder="Your answer"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button type="submit" size="lg" className="w-full mt-6" disabled={isLoading}>
+              {isLoading ? "Creating Account..." : "Create Account"}
+            </Button>
+          </form>
 
           <div className="mt-6 text-center">
             <p className="text-muted-foreground">

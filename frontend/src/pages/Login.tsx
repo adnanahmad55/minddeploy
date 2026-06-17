@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Brain, Lock, User, Mail, KeyRound } from 'lucide-react';
+import { Brain, Lock, User, Mail, KeyRound, HelpCircle } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -17,7 +17,8 @@ const Login = () => {
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [fpStep, setFpStep] = useState<1|2>(1);
   const [fpEmail, setFpEmail] = useState('');
-  const [fpOtp, setFpOtp] = useState('');
+  const [fpSecurityQuestion, setFpSecurityQuestion] = useState('');
+  const [fpSecurityAnswer, setFpSecurityAnswer] = useState('');
   const [fpNewPassword, setFpNewPassword] = useState('');
   const [fpIsLoading, setFpIsLoading] = useState(false);
 
@@ -46,22 +47,20 @@ const Login = () => {
     }
   };
 
-  const handleSendResetOTP = async (e: React.FormEvent) => {
+  const handleFetchSecurityQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fpEmail) return;
     setFpIsLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: fpEmail, purpose: 'reset' })
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/security-question/${fpEmail}`, {
+        method: 'GET',
       });
       const data = await res.json();
       if (res.ok) {
-        toast({ title: "OTP Sent", description: "Check your email for the reset code." });
+        setFpSecurityQuestion(data.security_question);
         setFpStep(2);
       } else {
-        toast({ title: "Error", description: data.detail || "Failed to send OTP", variant: "destructive" });
+        toast({ title: "Error", description: data.detail || "Failed to find user", variant: "destructive" });
       }
     } catch (err) {
       toast({ title: "Error", description: "Network error", variant: "destructive" });
@@ -72,13 +71,13 @@ const Login = () => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fpOtp || !fpNewPassword) return;
+    if (!fpSecurityAnswer || !fpNewPassword) return;
     setFpIsLoading(true);
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: fpEmail, otp_code: fpOtp, new_password: fpNewPassword })
+        body: JSON.stringify({ email: fpEmail, security_answer: fpSecurityAnswer, new_password: fpNewPassword })
       });
       const data = await res.json();
       if (res.ok) {
@@ -86,10 +85,10 @@ const Login = () => {
         setIsForgotOpen(false);
         setFpStep(1);
         setFpEmail('');
-        setFpOtp('');
+        setFpSecurityAnswer('');
         setFpNewPassword('');
       } else {
-        toast({ title: "Error", description: data.detail || "Invalid OTP", variant: "destructive" });
+        toast({ title: "Error", description: data.detail || "Invalid answer", variant: "destructive" });
       }
     } catch (err) {
       toast({ title: "Error", description: "Network error", variant: "destructive" });
@@ -166,7 +165,7 @@ const Login = () => {
                 <DialogTitle>Reset Password</DialogTitle>
               </DialogHeader>
               {fpStep === 1 ? (
-                <form onSubmit={handleSendResetOTP} className="space-y-4">
+                <form onSubmit={handleFetchSecurityQuestion} className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Email</label>
                     <div className="relative">
@@ -182,22 +181,26 @@ const Login = () => {
                     </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={fpIsLoading}>
-                    {fpIsLoading ? "Sending..." : "Send OTP"}
+                    {fpIsLoading ? "Fetching..." : "Next"}
                   </Button>
                 </form>
               ) : (
                 <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="p-4 bg-muted/20 rounded-md border border-border/50 mb-4">
+                    <p className="text-sm text-muted-foreground mb-1">Security Question</p>
+                    <p className="font-medium text-foreground">{fpSecurityQuestion}</p>
+                  </div>
+                  
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">OTP Code</label>
+                    <label className="text-sm font-medium text-foreground">Your Answer</label>
                     <div className="relative">
                       <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="text"
-                        value={fpOtp}
-                        onChange={(e) => setFpOtp(e.target.value)}
-                        className="pl-10 bg-input/50 tracking-widest text-lg font-bold"
-                        placeholder="6-digit code"
-                        maxLength={6}
+                        value={fpSecurityAnswer}
+                        onChange={(e) => setFpSecurityAnswer(e.target.value)}
+                        className="pl-10 bg-input/50"
+                        placeholder="Type your answer"
                         required
                       />
                     </div>

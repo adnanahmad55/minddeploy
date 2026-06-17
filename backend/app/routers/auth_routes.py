@@ -12,6 +12,18 @@ router = APIRouter(tags=["Auth"])
 
 @router.post("/send-otp")
 def send_otp(req: schemas.SendOTPRequest, db: Session = Depends(database.get_db)):
+    # OTP route kept but effectively bypassed/ignored by frontend now.
+    # Return dummy success just in case anything calls it.
+    return {"message": "OTP sent successfully (Dummy)"}
+
+@router.get("/security-question/{email}")
+def get_security_question(email: str, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not user.security_question:
+        raise HTTPException(status_code=400, detail="User does not have a security question set")
+    return {"security_question": user.security_question}
     # If signup, ensure email is not taken
     if req.purpose == 'signup':
         existing = db.query(models.User).filter(models.User.email == req.email).first()
@@ -50,21 +62,14 @@ def send_otp(req: schemas.SendOTPRequest, db: Session = Depends(database.get_db)
 
 @router.post("/reset-password")
 def reset_password(req: schemas.ResetPasswordRequest, db: Session = Depends(database.get_db)):
-    otp_entry = db.query(models.OTPVerification).filter(
-        models.OTPVerification.email == req.email,
-        models.OTPVerification.purpose == 'reset',
-        models.OTPVerification.otp_code == req.otp_code
-    ).first()
-
-    if not otp_entry or otp_entry.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-
     user = db.query(models.User).filter(models.User.email == req.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if not user.security_answer or user.security_answer.lower() != req.security_answer.lower().strip():
+        raise HTTPException(status_code=400, detail="Incorrect security answer")
+
     user.hashed_password = auth.get_password_hash(req.new_password)
-    db.delete(otp_entry)
     db.commit()
 
     return {"message": "Password reset successfully"}
@@ -75,26 +80,18 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
         
-    otp_entry = db.query(models.OTPVerification).filter(
-        models.OTPVerification.email == user.email,
-        models.OTPVerification.purpose == 'signup',
-        models.OTPVerification.otp_code == user.otp_code
-    ).first()
-
-    if not otp_entry or otp_entry.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-    
     hashed = auth.get_password_hash(user.password)
     
     new_user = models.User(
         username=user.username,
         email=user.email,
         hashed_password=hashed,
+        security_question=user.security_question.strip(),
+        security_answer=user.security_answer.lower().strip(),
         mind_tokens=10000
     )
     
     db.add(new_user)
-    db.delete(otp_entry) # Clean up OTP
     db.commit()
     db.refresh(new_user)
     
