@@ -14,7 +14,11 @@ import {
   LogOut,
   Swords,
   ChevronRight,
-  Activity
+  Activity,
+  Home,
+  ShoppingBag,
+  MessageSquare,
+  LayoutGrid
 } from 'lucide-react';
 // We're moving away from the static hero image to a css-based generative background,
 // but keeping the import just in case, though we won't actively use it in the new hero.
@@ -188,7 +192,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="relative z-10 container mx-auto px-6 py-10">
+      <main className="relative z-10 container mx-auto px-6 py-10 pb-28 md:pb-10">
         
         {/* Immersive Hero Section */}
         <section className="relative rounded-3xl overflow-hidden mb-12 border border-white/10 shadow-2xl shadow-cyber-blue/5 group">
@@ -414,6 +418,46 @@ const Dashboard = () => {
         </footer>
 
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-white/10 pb-safe">
+        <div className="flex items-center justify-around py-3 px-2">
+          <Link to="/dashboard" className="flex flex-col items-center justify-center w-full group">
+            <div className="p-2 rounded-xl transition-all group-hover:bg-white/5 bg-cyber-blue/10">
+              <Home className="w-6 h-6 text-cyber-blue" />
+            </div>
+            <span className="text-[10px] mt-1 font-medium text-cyber-blue">Home</span>
+          </Link>
+          <Link to="/leaderboard" className="flex flex-col items-center justify-center w-full group">
+            <div className="p-2 rounded-xl transition-all group-hover:bg-white/5">
+              <Trophy className="w-6 h-6 text-muted-foreground group-hover:text-cyber-gold transition-colors" />
+            </div>
+            <span className="text-[10px] mt-1 font-medium text-muted-foreground group-hover:text-foreground">Rank</span>
+          </Link>
+          <Link to="/store" className="flex flex-col items-center justify-center w-full group">
+            <div className="p-2 rounded-xl transition-all group-hover:bg-white/5">
+              <ShoppingBag className="w-6 h-6 text-muted-foreground group-hover:text-cyber-purple transition-colors" />
+            </div>
+            <span className="text-[10px] mt-1 font-medium text-muted-foreground group-hover:text-foreground">Store</span>
+          </Link>
+          <Link to="/forums" className="flex flex-col items-center justify-center w-full group">
+            <div className="p-2 rounded-xl transition-all group-hover:bg-white/5">
+              <LayoutGrid className="w-6 h-6 text-muted-foreground group-hover:text-cyber-green transition-colors" />
+            </div>
+            <span className="text-[10px] mt-1 font-medium text-muted-foreground group-hover:text-foreground">Forums</span>
+          </Link>
+          <Link to="/messages" className="flex flex-col items-center justify-center w-full group relative">
+            <div className="p-2 rounded-xl transition-all group-hover:bg-white/5">
+              <MessageSquare className="w-6 h-6 text-muted-foreground group-hover:text-cyber-red transition-colors" />
+              <span className="absolute top-2 right-4 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-red opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-red"></span>
+              </span>
+            </div>
+            <span className="text-[10px] mt-1 font-medium text-muted-foreground group-hover:text-foreground">Chat</span>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };
